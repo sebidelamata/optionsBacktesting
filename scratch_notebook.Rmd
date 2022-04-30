@@ -1,0 +1,19 @@
+
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+# source our scraper
+source("./scraper.R")
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+qqq_data <- grab_option_data(
+  "QQQ"
+)
+
+glimpse(qqq_data)
+
+```
