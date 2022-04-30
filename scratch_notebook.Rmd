@@ -10,10 +10,40 @@ source("./scraper.R")
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 
-qqq_data <- grab_option_data(
-  "QQQ"
+watchlist <- c(
+  "QQQ",
+  "SPY",
+  "IWM",
+  "SLYV",
+  "FXI",
+  "DIA",
+  "ARKK",
+  "FEZ",
+  "EEM",
+  "EWW",
+  "EWZ",
+  "XLB",
+  "XLV",
+  "XLU",
+  "XLF",
+  "XLI",
+  "XOP",
+  "GLD",
+  "SLV",
+  "TLT",
+  "HYG"
 )
 
-glimpse(qqq_data)
+watchlist_data <- data.frame()
+
+watchlist_data <- do.call(
+  rbind,
+  lapply(
+    watchlist,
+    grab_option_data(x)
+    )
+  )
+
+glimpse(watchlist_data)
 
 ```
