@@ -40,7 +40,7 @@ watchlist_data <- do.call(
   rbind,
   lapply(
     watchlist,
-    grab_option_data(x)
+    grab_option_data
     )
   )
 
