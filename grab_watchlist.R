@@ -1,5 +1,5 @@
 # grab our scraper script
-source("scraper.R")
+source("~/optionsBacktesting/scraper.R")
 
 # declare the tickers we want in our watchlist
 watchlist <- c(
