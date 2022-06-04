@@ -18,41 +18,11 @@ db <- DBI::dbConnect(driver_name,
 )
 
 
-update <- dbSendQuery(
+update <- postgresqlExecStatement(
   db, 
-  'insert into public.watchlist_data VALUES "option = ?,
-  bid = ?,
-  bid_size = ?,
-  ask = ?,
-  ask_size = ?,
-  iv = ?,
-  open_interest = ?,
-  volume = ?,
-  delta = ?,
-  gamma = ?,
-  theta = ?,
-  rho = ?
-  vega = ?,
-  theo = ?,
-  change = ?,
-  open = ?,
-  high = ?,
-  low = ?,
-  tick = ?,
-  last_trade_price = ?,
-  last_trade_time = ?,
-  percent_change = ?,
-  prev_day_close = ?,
-  underlying_close = ?,
-  strike_price = ?,
-  contract_type = ?,
-  underlying_ticker = ?,
-  expiration_date = ?,
-  scrape_date = ?'
+  'insert into public.watchlist_data VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)',
+  list(watchlist_data[1,])
   )
-
-
-dbBind(update, watchlist_data[1,])  # send the updated data
 
 
 dbClearResult(update)
