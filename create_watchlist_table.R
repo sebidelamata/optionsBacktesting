@@ -81,6 +81,7 @@ watchlist_data <- data.frame(
 
 DBI::dbWriteTable(
   db,
+  "watchlist_data",
   watchlist_data
 )
 
