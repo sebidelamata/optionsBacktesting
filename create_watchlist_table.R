@@ -39,8 +39,8 @@ watchlist_data <- data.frame(
   strike_price = numeric(),
   contract_type = character(),
   underlying_ticker = character(),
-  expiration_date = POSIXct(),
-  scrape_date = POSIXct()
+  expiration_date = numeric(),
+  scrape_date = numeric()
 )
 
 
