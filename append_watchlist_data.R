@@ -60,7 +60,7 @@ db <- DBI::dbConnect(driver_name,
 DBI::dbWriteTable(
   db,
   name = c("public","watchlist_data"),
-  value = watchlist_data,
+  value = watchlist_data[1,],
   row.names = FALSE,
   append = TRUE
 )
