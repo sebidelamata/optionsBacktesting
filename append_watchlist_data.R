@@ -20,7 +20,7 @@ db <- DBI::dbConnect(driver_name,
 
 DBI::dbWriteTable(
   db,
-  "watchlist_data",
+  "public.watchlist_data",
   watchlist_data,
   append = TRUE
 )
