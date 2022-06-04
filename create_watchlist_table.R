@@ -14,7 +14,7 @@ db <- DBI::dbConnect(driver_name,
 
 create_table_query_one <- 'CREATE SCHEMA [IF NOT EXISTS] "options";'
 
-create_table_query_one <- 'CREATE TABLE [IF NOT EXISTS] "options.watchlist_data" (
+create_table_query_two <- 'CREATE TABLE [IF NOT EXISTS] "options.watchlist_data" (
   option VARCHAR ( 32 ) PRIMARY KEY,
   bid NUMERIC ( 8 ) NOT NULL,
   bid_size INT NOT NULL,
@@ -49,7 +49,12 @@ create_table_query_one <- 'CREATE TABLE [IF NOT EXISTS] "options.watchlist_data"
 
 DBI::dbSendQuery(
   db,
-  create_table_query
+  create_table_query_one
+)
+
+DBI::dbSendQuery(
+  db,
+  create_table_query_two
 )
 
 DBI::dbDisconnect(db)
