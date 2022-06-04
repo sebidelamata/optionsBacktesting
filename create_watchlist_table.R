@@ -11,7 +11,7 @@ db <- DBI::dbConnect(driver_name,
 		     password = getPass("Enter Password:")
 		     )
 
-watchlist_data <- data.frame(
+watchlist_data_table <- data.frame(
   option = character(),
   bid = numeric(),
   bid_size = integer(),
@@ -82,7 +82,7 @@ watchlist_data <- data.frame(
 DBI::dbWriteTable(
   db,
   "watchlist_data",
-  watchlist_data
+  watchlist_data_table
 )
 
 
