@@ -12,8 +12,8 @@ db <- DBI::dbConnect(driver_name,
 		     )
 
 
-create_table_query <- "CREATE SCHEMA [IF NOT EXISTS] options;
-  CREATE TABLE [IF NOT EXISTS] oprions.watchlist_data (
+create_table_query <- 'CREATE SCHEMA [IF NOT EXISTS] "options";
+  CREATE TABLE [IF NOT EXISTS] "options.watchlist_data" (
   option VARCHAR ( 32 ) PRIMARY KEY,
   bid NUMERIC ( 8 ) NOT NULL,
   bid_size INT NOT NULL,
@@ -44,7 +44,7 @@ create_table_query <- "CREATE SCHEMA [IF NOT EXISTS] options;
   expiration_date DATE NOT NULL,
   scrape_date DATE NOT NULL
   );
-  "
+  '
 
 DBI::dbSendQuery(
   db,
