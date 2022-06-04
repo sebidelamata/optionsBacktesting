@@ -52,7 +52,7 @@ update <- dbSendQuery(
   )
 
 
-dbBind(update, watchlist_data)  # send the updated data
+dbBind(update, watchlist_data[1,])  # send the updated data
 
 
 dbClearResult(update)
