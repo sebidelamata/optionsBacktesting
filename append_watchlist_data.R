@@ -22,6 +22,7 @@ DBI::dbWriteTable(
   db,
   "watchlist_data",
   watchlist_data,
+  row.names = FALSE,
   append = TRUE
 )
 
