@@ -84,8 +84,7 @@ DBI::dbWriteTable(
   "watchlist_data",
   watchlist_data_table,
   overwrite = TRUE,
-  row.names = FALSE,
-  append = TRUE
+  row.names = FALSE
 )
 
 
