@@ -20,7 +20,7 @@ db <- DBI::dbConnect(driver_name,
 
 update <- dbSendQuery(
   db, 
-  'insert into watchlist_data set "option = ?,
+  'insert into public.watchlist_data set "option = ?,
   bid = ?,
   bid_size = ?,
   ask = ?,
