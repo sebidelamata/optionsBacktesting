@@ -82,8 +82,13 @@ watchlist_data_table <- data.frame(
 DBI::dbWriteTable(
   db,
   "watchlist_data",
-  watchlist_data_table
+  watchlist_data_table,
+  overwrite = TRUE
 )
 
+
+DBI::dbGetQuery(
+  db, 
+  'ALTER TABLE watchlist_data ADD CONSTRAINT watchlist_data_pk PRIMARY KEY ("option")')
 
 DBI::dbDisconnect(db)
