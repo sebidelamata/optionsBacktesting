@@ -46,7 +46,7 @@ create_table_query <- "CREATE SCHEMA [IF NOT EXISTS] options;
   );
   "
 
-DBI::dbGetQuery(
+DBI::dbSendQuery(
   db,
   create_table_query
 )
