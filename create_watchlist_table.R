@@ -32,7 +32,7 @@ watchlist_data <- data.frame(
   low = numeric(),
   tick = character(),
   last_trade_price = numeric(),
-  last_trade_time = POSIXct(),
+  last_trade_time = numeric(),
   percent_change = numeric(),
   prev_day_close = numeric(),
   underlying_close = numeric(),
