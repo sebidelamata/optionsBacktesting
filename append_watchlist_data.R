@@ -32,18 +32,4 @@ append_watchlist_data <- function(){
   DBI::dbDisconnect(db)
 }
 
-# create try catch function
-error_test <- tryCatch(
-  
-  {
-  # run our main function
-  append_watchlist_data()
-  },
-  {
-    error = function(e){
-      FALSE
-    }
-  }
-)
-
-error_test
+append_watchlist_data()
