@@ -91,8 +91,8 @@ watchlist_data <- grab_watchlist()
 
 DBI::dbWriteTable(
   db,
-  watchlist_data,
-  watchlist_data,
+  value =  watchlist_data,
+  name = "watchlist_data",
   overwrite = TRUE,
   row.names = FALSE
 )
