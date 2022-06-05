@@ -33,7 +33,7 @@ db <- DBI::dbConnect(driver_name,
 #   table   = "watchlist_data"
 # )
 
-DBI::dbAppendTable(
+DBI::dbWriteTable(
   db,
   name = "watchlist_data",
   value = watchlist_data
@@ -68,8 +68,8 @@ DBI::dbAppendTable(
   #   expiration_date = "double precision",
   #   scrape_date = "double precision"
   # ),
-  # row.names = FALSE,
-  # append = TRUE
+  row.names = FALSE,
+  append = TRUE
 )
 
 
