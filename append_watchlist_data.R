@@ -1,7 +1,7 @@
 library(RPostgreSQL)
 library(getPass)
 
-source("grab_watchlist.R")
+source("/home/sebi/optionsBacktesting/grab_watchlist.R")
 
 
 append_watchlist_data <- function(){
