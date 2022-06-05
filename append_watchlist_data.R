@@ -31,5 +31,3 @@ append_watchlist_data <- function(){
   # close database connection
   DBI::dbDisconnect(db)
 }
-
-append_watchlist_data()
