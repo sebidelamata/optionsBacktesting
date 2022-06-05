@@ -41,7 +41,7 @@ error_test <- tryCatch(
   },
   {
     error = function(e){
-      print("Error creating table")
+      e
     }
   }
 )
