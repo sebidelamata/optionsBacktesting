@@ -8,9 +8,7 @@ driver_name <- dbDriver(drvName = "PostgreSQL")
 db <- DBI::dbConnect(driver_name,
 		     dbname="sebi",
 		     host="localhost",
-		     port = 5432,
-		     user = "sebi",
-		     password = getPass("Enter Password:")
+		     port = 5432
 		     )
 
 # watchlist_data_table <- data.frame(
