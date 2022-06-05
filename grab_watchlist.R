@@ -1,5 +1,5 @@
 # grab our scraper script
-source("~/optionsBacktesting/scraper.R")
+source("/home/sebi/optionsBacktesting/scraper.R")
 
 
 grab_watchlist <- function(){

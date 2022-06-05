@@ -4,7 +4,7 @@
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 
 # source our scraper
-source("./scraper.R")
+source("/home/sebi/optionsBacktesting/scraper.R")
 
 ```
 
