@@ -1,6 +1,8 @@
 library(RPostgreSQL)
 library(getPass)
 
+source("./grab_watchlist.R")
+
 driver_name <- dbDriver(drvName = "PostgreSQL")
 
 db <- DBI::dbConnect(driver_name,
@@ -11,37 +13,37 @@ db <- DBI::dbConnect(driver_name,
 		     password = getPass("Enter Password:")
 		     )
 
-watchlist_data_table <- data.frame(
-  option = character(),
-  bid = numeric(),
-  bid_size = integer(),
-  ask = numeric(),
-  ask_size = integer(),
-  iv = numeric(),
-  open_interest = integer(),
-  volume = integer(),
-  delta = numeric(),
-  gamma = numeric(),
-  theta = numeric(),
-  rho = numeric(),
-  vega = numeric(),
-  theo = numeric(),
-  change = numeric(),
-  open = numeric(),
-  high = numeric(),
-  low = numeric(),
-  tick = character(),
-  last_trade_price = numeric(),
-  last_trade_time = numeric(),
-  percent_change = numeric(),
-  prev_day_close = numeric(),
-  underlying_close = numeric(),
-  strike_price = numeric(),
-  contract_type = character(),
-  underlying_ticker = character(),
-  expiration_date = numeric(),
-  scrape_date = numeric()
-)
+# watchlist_data_table <- data.frame(
+#   option = character(),
+#   bid = numeric(),
+#   bid_size = integer(),
+#   ask = numeric(),
+#   ask_size = integer(),
+#   iv = numeric(),
+#   open_interest = integer(),
+#   volume = integer(),
+#   delta = numeric(),
+#   gamma = numeric(),
+#   theta = numeric(),
+#   rho = numeric(),
+#   vega = numeric(),
+#   theo = numeric(),
+#   change = numeric(),
+#   open = numeric(),
+#   high = numeric(),
+#   low = numeric(),
+#   tick = character(),
+#   last_trade_price = numeric(),
+#   last_trade_time = numeric(),
+#   percent_change = numeric(),
+#   prev_day_close = numeric(),
+#   underlying_close = numeric(),
+#   strike_price = numeric(),
+#   contract_type = character(),
+#   underlying_ticker = character(),
+#   expiration_date = numeric(),
+#   scrape_date = numeric()
+# )
 
 
 # create_table_query_one <- 'CREATE SCHEMA [IF NOT EXISTS] options;'
@@ -79,16 +81,18 @@ watchlist_data_table <- data.frame(
 #   );
 #   '
 
-table_id <- DBI::Id(
-  db,
-  schema  = "public",
-  table   = "watchlist_data"
-)
+# table_id <- DBI::Id(
+#   db,
+#   schema  = "public",
+#   table   = "watchlist_data"
+# )
+
+watchlist_data <- grab_watchlist()
 
 DBI::dbWriteTable(
   db,
-  table_id,
-  watchlist_data_table,
+  watchlist_data,
+  watchlist_data,
   overwrite = TRUE,
   row.names = FALSE
 )
