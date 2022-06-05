@@ -36,7 +36,7 @@ db <- DBI::dbConnect(driver_name,
 DBI::dbWriteTable(
   db,
   name = "watchlist_data",
-  value = watchlist_data
+  value = watchlist_data,
   # field.types = c(
   #   option = "text",
   #   bid = "double precision",
