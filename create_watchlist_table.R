@@ -79,9 +79,14 @@ watchlist_data_table <- data.frame(
 #   );
 #   '
 
+table_id <- DBI::Id(
+  schema  = "public",
+  table   = "watchlist_data"
+)
+
 DBI::dbWriteTable(
   db,
-  "watchlist_data",
+  table_id,
   watchlist_data_table,
   overwrite = TRUE,
   row.names = FALSE
