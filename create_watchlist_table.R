@@ -98,10 +98,9 @@ DBI::dbWriteTable(
 )
 
 
-# DBI::dbSendQuery(
-#   db, 
-#   # 'ALTER TABLE watchlist_data ADD CONSTRAINT watchlist_data_pk PRIMARY KEY ("option")'
-#   create_table_query_two
-#   )
+DBI::dbSendQuery(
+  db,
+  'ALTER TABLE watchlist_data ADD PRIMARY KEY ("option")'
+  )
 
 DBI::dbDisconnect(db)
