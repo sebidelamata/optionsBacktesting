@@ -29,7 +29,7 @@ db <- DBI::dbConnect(driver_name,
 
 DBI::dbAppendTable(
   db,
-  name = c("public","watchlist_data"),
+  name = "watchlist_data",
   value = watchlist_data
   # field.types = c(
   #   option = "text",
