@@ -27,16 +27,16 @@ db <- DBI::dbConnect(driver_name,
 # 
 # dbClearResult(update)
 
-table_id <- DBI::Id(
-  db,
-  schema  = "public",
-  table   = "watchlist_data"
-)
+# table_id <- DBI::Id(
+#   db,
+#   schema  = "public",
+#   table   = "watchlist_data"
+# )
 
 DBI::dbAppendTable(
   db,
   name = table_id,
-  value = watchlist_data
+  value = "watchlist_data"
   # field.types = c(
   #   option = "text",
   #   bid = "double precision",
