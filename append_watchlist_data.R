@@ -12,9 +12,7 @@ driver_name <- dbDriver(drvName = "PostgreSQL")
 db <- DBI::dbConnect(driver_name,
                      dbname="sebi",
                      host="localhost",
-                     port = 5432,
-                     user = "sebi",
-                     password = getPass("Enter Password:")
+                     port = 5432
 )
 
 # update <- paste0("INSERT INTO public.watchlist_data VALUES ('",watchlist_data$bid[1],"','",watchlist_data$bid_size[1],"','",watchlist_data$ask[1],"','",watchlist_data$ask_size[1],"','",watchlist_data$iv[1],"','",watchlist_data$volume[1],"','",watchlist_data$delta[1],"','",watchlist_data$gamma[1],"','",watchlist_data$theta[1],"','",watchlist_data$rho[1],"','",watchlist_data$vega[1],"','",watchlist_data$theo[1],"','",watchlist_data$change[1],"','",watchlist_data$open[1],"','",watchlist_data$high[1],"','",watchlist_data$low[1],"','",watchlist_data$tick[1],"','",watchlist_data$last_trade_price[1],"','",watchlist_data$last_trade_time[1],"','",watchlist_data$percent_change[1],"','",watchlist_data$prev_day_close[1],"','",watchlist_data$underlying_close[1],"','",watchlist_data$stike_price[1],"','",watchlist_data$contract_type[1],"','",watchlist_data$underlying_ticker[1],"','",watchlist_data$expiration_date[1],"','",watchlist_data$scrape_date[1],"');")
