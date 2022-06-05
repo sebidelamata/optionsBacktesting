@@ -39,18 +39,4 @@ create_watchlist_table <- function(){
 
 }
 
-# create try catch function
-error_test <- tryCatch(
-  
-  {
-    # run our main function
-    create_watchlist_table()
-  },
-  {
-    error = function(e){
-      FALSE
-      }
-  }
-)
-
-error_test
+create_watchlist_table()
