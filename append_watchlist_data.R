@@ -27,43 +27,43 @@ db <- DBI::dbConnect(driver_name,
 # 
 # dbClearResult(update)
 
-DBI::dbWriteTable(
+DBI::dbAppendTable(
   db,
   name = c("public","watchlist_data"),
-  value = watchlist_data[1,],
-  field.types = c(
-    option = "text",
-    bid = "double precision",
-    bid_size = "integer",
-    ask = "double precision",
-    ask_size = "integer",
-    iv = "double precision",
-    open_interest = "integer",
-    volume = "integer",
-    delta = "double precision",
-    gamma = "double precision",
-    theta = "double precision",
-    rho = "double precision",
-    vega = "double precision",
-    theo = "double precision",
-    change = "double precision",
-    open = "double precision",
-    high = "double precision",
-    low = "double precision",
-    tick = "text",
-    last_trade_price = "double precision",
-    last_trade_time = "double precision",
-    percent_change = "double precision",
-    prev_day_close = "double precision",
-    underlying_close = "double precision",
-    strike_price = "double precision",
-    contract_type = "text",
-    underlying_ticker = "text",
-    expiration_date = "double precision",
-    scrape_date = "double precision"
-  ),
-  row.names = FALSE,
-  append = TRUE
+  value = watchlist_data
+  # field.types = c(
+  #   option = "text",
+  #   bid = "double precision",
+  #   bid_size = "integer",
+  #   ask = "double precision",
+  #   ask_size = "integer",
+  #   iv = "double precision",
+  #   open_interest = "integer",
+  #   volume = "integer",
+  #   delta = "double precision",
+  #   gamma = "double precision",
+  #   theta = "double precision",
+  #   rho = "double precision",
+  #   vega = "double precision",
+  #   theo = "double precision",
+  #   change = "double precision",
+  #   open = "double precision",
+  #   high = "double precision",
+  #   low = "double precision",
+  #   tick = "text",
+  #   last_trade_price = "double precision",
+  #   last_trade_time = "double precision",
+  #   percent_change = "double precision",
+  #   prev_day_close = "double precision",
+  #   underlying_close = "double precision",
+  #   strike_price = "double precision",
+  #   contract_type = "text",
+  #   underlying_ticker = "text",
+  #   expiration_date = "double precision",
+  #   scrape_date = "double precision"
+  # ),
+  # row.names = FALSE,
+  # append = TRUE
 )
 
 
