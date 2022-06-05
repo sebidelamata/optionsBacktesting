@@ -80,6 +80,7 @@ watchlist_data_table <- data.frame(
 #   '
 
 table_id <- DBI::Id(
+  db,
   schema  = "public",
   table   = "watchlist_data"
 )

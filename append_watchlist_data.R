@@ -28,6 +28,7 @@ db <- DBI::dbConnect(driver_name,
 # dbClearResult(update)
 
 table_id <- DBI::Id(
+  db,
   schema  = "public",
   table   = "watchlist_data"
 )
