@@ -40,7 +40,9 @@ error_test <- tryCatch(
   append_watchlist_data()
   },
   {
-    error = print("Error writing data to table")
+    error = function(e){
+      print("Error creating table")
+    }
   }
 )
 

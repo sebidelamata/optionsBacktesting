@@ -47,7 +47,9 @@ error_test <- tryCatch(
     create_watchlist_table()
   },
   {
-    error = print("Error creating table")
+    error = function(e){
+      print("Error creating table")
+      }
   }
 )
 
