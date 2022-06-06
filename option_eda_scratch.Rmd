@@ -1,0 +1,45 @@
+
+
+```{r}
+
+library(RPostgreSQL)
+library(getPass)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r}
+
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
+
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+                     dbname = "sebi",
+                     host = "192.168.0.12",
+                     port = 5432,
+                     user = "sebi",
+                     password = getPass("Enter Password:")
+)
+
+res <- dbSendQuery(db, "SELECT * FROM watchlist_data;")
+data_pull <- dbFetch(res)
+dbClearResult(res)
+dbDisconnect(db)
+
+```
+
+```{r}
+
+QQQ_330_calls <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$strike_price == 330 & data_pull$contract_type == "C",]
+
+glimpse(QQQ_330_calls)
+
+ggplot(
+  data = QQQ_330_calls,
+  aes(x = expiration_date, y = iv)
+  ) +
+  geom_line()
+
+```
