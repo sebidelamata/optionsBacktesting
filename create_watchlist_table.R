@@ -1,5 +1,4 @@
 library(RPostgreSQL)
-library(getPass)
 
 source("/home/sebi/optionsBacktesting/grab_watchlist.R")
 
