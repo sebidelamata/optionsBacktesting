@@ -504,49 +504,6 @@ scrape_data &lt;- read_json(
   )</code></pre>
 <pre class="r"><code>typeof(scrape_data)</code></pre>
 <pre><code>## [1] &quot;list&quot;</code></pre>
-<pre class="r"><code>summary(scrape_data$data$options)</code></pre>
-<pre><code>##     option               bid              bid_size           ask        
-##  Length:7032        Min.   :  0.0000   Min.   :  0.00   Min.   :  0.01  
-##  Class :character   1st Qu.:  0.8275   1st Qu.: 18.00   1st Qu.:  0.93  
-##  Mode  :character   Median : 12.5700   Median : 50.00   Median : 12.88  
-##                     Mean   : 38.3538   Mean   : 69.98   Mean   : 38.77  
-##                     3rd Qu.: 53.0650   3rd Qu.: 80.00   3rd Qu.: 53.66  
-##                     Max.   :320.6300   Max.   :901.00   Max.   :322.36  
-##     ask_size             iv         open_interest          volume       
-##  Min.   :   1.00   Min.   :0.0000   Min.   :     0.0   Min.   :    0.0  
-##  1st Qu.:  23.00   1st Qu.:0.2318   1st Qu.:     3.0   1st Qu.:    0.0  
-##  Median :  50.00   Median :0.2900   Median :   102.0   Median :    1.0  
-##  Mean   :  88.95   Mean   :0.3151   Mean   :  1640.3   Mean   :  329.4  
-##  3rd Qu.: 114.00   3rd Qu.:0.3689   3rd Qu.:   611.2   3rd Qu.:   35.0  
-##  Max.   :1108.00   Max.   :7.9639   Max.   :155487.0   Max.   :66784.0  
-##      delta              gamma              theta               rho           
-##  Min.   :-1.00000   Min.   :0.000000   Min.   :-0.50620   Min.   :-2.174600  
-##  1st Qu.:-0.85850   1st Qu.:0.000500   1st Qu.:-0.09273   1st Qu.:-0.112200  
-##  Median :-0.00005   Median :0.003200   Median :-0.03120   Median : 0.000000  
-##  Mean   :-0.16857   Mean   :0.005544   Mean   :-0.06387   Mean   :-0.008486  
-##  3rd Qu.: 0.15793   3rd Qu.:0.008200   3rd Qu.:-0.00670   3rd Qu.: 0.045300  
-##  Max.   : 1.00000   Max.   :0.060200   Max.   : 0.00000   Max.   : 2.375200  
-##       vega             theo              change              open        
-##  Min.   :0.0000   Min.   :  0.0000   Min.   :-12.0150   Min.   :  0.000  
-##  1st Qu.:0.0128   1st Qu.:  0.7524   1st Qu.:  0.0000   1st Qu.:  0.000  
-##  Median :0.1119   Median : 11.7170   Median :  0.0000   Median :  0.040  
-##  Mean   :0.2124   Mean   : 37.5137   Mean   :  0.4069   Mean   :  7.610  
-##  3rd Qu.:0.2991   3rd Qu.: 51.4188   3rd Qu.:  0.1150   3rd Qu.:  6.702  
-##  Max.   :1.4455   Max.   :320.7550   Max.   : 36.9100   Max.   :321.360  
-##       high              low              tick           last_trade_price  
-##  Min.   :  0.000   Min.   :  0.000   Length:7032        Min.   :  0.0000  
-##  1st Qu.:  0.000   1st Qu.:  0.000   Class :character   1st Qu.:  0.0875  
-##  Median :  0.050   Median :  0.030   Mode  :character   Median :  4.1900  
-##  Mean   :  7.937   Mean   :  7.397                      Mean   : 23.1862  
-##  3rd Qu.:  7.350   3rd Qu.:  6.000                      3rd Qu.: 27.6600  
-##  Max.   :321.360   Max.   :321.020                      Max.   :321.2500  
-##  last_trade_time    percent_change    prev_day_close   
-##  Length:7032        Min.   :-98.788   Min.   :  0.000  
-##  Class :character   1st Qu.:  0.000   1st Qu.:  0.795  
-##  Mode  :character   Median :  0.000   Median : 11.550  
-##                     Mean   :  6.577   Mean   : 36.234  
-##                     3rd Qu.: 11.902   3rd Qu.: 47.634  
-##                     Max.   :369.565   Max.   :309.595</code></pre>
 <pre class="r"><code>glimpse(scrape_data$data$options)</code></pre>
 <pre><code>## Rows: 7,032
 ## Columns: 23
@@ -573,6 +530,49 @@ scrape_data &lt;- read_json(
 ## $ last_trade_time  &lt;chr&gt; &quot;2022-06-10T12:24:25&quot;, &quot;2022-06-10T15:51:18&quot;, NA, &quot;20…
 ## $ percent_change   &lt;dbl&gt; -16.6349, 100.0000, 0.0000, 0.0000, -16.8684, 0.0000,…
 ## $ prev_day_close   &lt;dbl&gt; 70.725, 0.005, 65.725, 0.005, 60.735, 0.005, 55.765, …</code></pre>
+<pre class="r"><code># make it into a data frame
+option_data &lt;- as.data.frame(
+  scrape_data$data$options
+)
+
+  # clean last trade datetime from string
+  option_data$last_trade_time &lt;- as.POSIXct(
+    option_data$last_trade_time, 
+    &quot;%Y-%m-%dT%H:%M:%S&quot;, 
+    tz = &quot;America/Chicago&quot;
+    )
+  
+  # grab umderlying close
+  option_data$underlying_close &lt;- scrape_data$data$close</code></pre>
+<pre class="r"><code>print(option_data$option[1])</code></pre>
+<pre><code>## [1] &quot;QQQ220613C00230000&quot;</code></pre>
+<pre class="r"><code>  # grab our strike price from the option name string
+  option_data$strike_price &lt;- as.numeric(stri_sub(option_data$option, -8)) / 1000
+   
+  # grab our contract type from the option name string
+  option_data$contract_type &lt;- as.factor(stri_sub(option_data$option, -9, -9))
+  
+  # grab our underlying ticker from the option name string
+  option_data$underlying_ticker &lt;- as.factor(stri_sub(option_data$option, -999, -16))
+  
+  # grab our underlying ticker from the option name string
+  option_data$expiration_date &lt;- as.Date(
+    stri_sub(option_data$option, -15, -10),
+    format = &quot;%y%m%d&quot;
+    )</code></pre>
+<pre class="r"><code>  # if we want to set this up to scrape every day
+  # we need to create a column to record 
+  # on what day the data was scraped
+  option_data$scrape_date &lt;- Sys.Date()
+  
+  # since we have already taken all the useful data
+  # from the option column, we can keep using it as
+  # a unique identifier for our table if we append
+  # the scrape date to the end of the string
+  option_data$option &lt;- paste0(
+    option_data$option,
+    as.character(Sys.Date())
+  )</code></pre>
 </div>
 </div>
 

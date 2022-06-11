@@ -148,5 +148,7 @@ print(option_data$option[1])
     option_data$option,
     as.character(Sys.Date())
   )
+  
+print(option_data[1,])
 
 ```
