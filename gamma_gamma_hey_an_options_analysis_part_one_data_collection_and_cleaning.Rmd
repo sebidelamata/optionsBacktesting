@@ -316,7 +316,7 @@ append_watchlist_data <- function(){
   
   # close database connection
   DBI::dbDisconnect(db)
-
+}
 
 ```
 
@@ -336,7 +336,21 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::ho
 
 ```
 
+```{r}
 
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
 
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+                     dbname = "sebi",
+                     host = "192.168.0.12",
+                     port = 5432
+)
+
+res <- dbSendQuery(db, "SELECT * FROM watchlist_data;")
+data_pull <- dbFetch(res)
+dbClearResult(res)
+dbDisconnect(db)
 
 ```
