@@ -279,3 +279,64 @@ DBI::dbSendQuery(
   DBI::dbDisconnect(db)
 
 ```
+
+### Appending to the existing PostgreSQL table (append_watchlist_data.R)
+
+```{r eval=FALSE}
+
+library(DBI)
+library(RPostgreSQL)
+
+source("/home/sebi/optionsBacktesting/grab_watchlist.R")
+
+
+append_watchlist_data <- function(){
+  
+  # grab our watchlist data
+  watchlist_data <- grab_watchlist()
+  
+  # establish driver name
+  driver_name <- dbDriver(drvName = "PostgreSQL")
+  
+  # create database connection
+  db <- DBI::dbConnect(driver_name,
+                       dbname="sebi",
+                       host="localhost",
+                       port = 5432
+  )
+  
+  # append our scraped data to the table
+  DBI::dbWriteTable(
+    db,
+    name = "watchlist_data",
+    value = watchlist_data,
+    row.names = FALSE,
+    append = TRUE
+  )
+  
+  # close database connection
+  DBI::dbDisconnect(db)
+}
+
+```
+
+### Only scrape for data on market days (trading_day_scheduler.R)
+
+```{r}
+
+library(timeDate)
+
+source("/home/sebi/optionsBacktesting/append_watchlist_data.R")
+
+if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::holidayNYSE()))){
+  append_watchlist_data()
+} else {
+  message("Market Closed Today")
+}
+
+```
+
+
+
+
+```
