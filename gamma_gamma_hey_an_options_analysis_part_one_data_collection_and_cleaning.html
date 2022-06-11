@@ -372,10 +372,13 @@ pre code {
 </div>
 </div>
 <div id="part-one-primary-data-collection-and-cleaning" class="section level1">
-<h1>Part One/: Primary Data Collection and Cleaning</h1>
+<h1>Part One: Primary Data Collection and Cleaning</h1>
 <div id="abstract" class="section level2">
 <h2>Abstract</h2>
-<p>In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL to hold options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE open access API and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data.</p>
+<p>In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE open access API and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data.</p>
+</div>
+<div id="background" class="section level2">
+<h2>Background</h2>
 </div>
 <div id="computing-environment" class="section level2">
 <h2>Computing Environment</h2>
@@ -389,22 +392,10 @@ pre code {
 </div>
 <div id="r-environment" class="section level4">
 <h4>R Environment</h4>
-<pre class="r"><code>version</code></pre>
+<pre class="r"><code>version[c(2,13)]</code></pre>
 <pre><code>##                _                           
-## platform       aarch64-unknown-linux-gnu   
 ## arch           aarch64                     
-## os             linux-gnu                   
-## system         aarch64, linux-gnu          
-## status                                     
-## major          4                           
-## minor          0.2                         
-## year           2020                        
-## month          06                          
-## day            22                          
-## svn rev        78730                       
-## language       R                           
-## version.string R version 4.0.2 (2020-06-22)
-## nickname       Taking Off Again</code></pre>
+## version.string R version 4.0.2 (2020-06-22)</code></pre>
 <pre class="r"><code>installed.packages()[,3]</code></pre>
 <pre><code>##        askpass     assertthat      backports          bench            bit 
 ##          &quot;1.1&quot;        &quot;0.2.1&quot;        &quot;1.4.1&quot;        &quot;1.1.2&quot;        &quot;4.0.4&quot; 
@@ -479,6 +470,109 @@ pre code {
 ##         xtable 
 ##        &quot;1.8-4&quot;</code></pre>
 </div>
+</div>
+<div id="scraping-options-data-from-the-cboe" class="section level2">
+<h2>Scraping options data from the CBOE</h2>
+<pre class="r"><code># import our libraries
+library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(jsonlite)
+library(stringi)</code></pre>
+<pre class="r"><code># let&#39;s pick a ticker to scrape
+ticker &lt;- &quot;QQQ&quot;
+
+# create our scraping address
+scrape_target &lt;- paste0(
+  &quot;https://cdn.cboe.com/api/global/delayed_quotes/options/&quot;,
+  ticker,
+  &quot;.json&quot;
+  )
+  
+print(scrape_target)</code></pre>
+<pre><code>## [1] &quot;https://cdn.cboe.com/api/global/delayed_quotes/options/QQQ.json&quot;</code></pre>
+<pre class="r"><code># next we read the json data at our scrape target
+scrape_data &lt;- read_json(
+    scrape_target,
+    simplifyVector = TRUE
+  )</code></pre>
+<pre class="r"><code>typeof(scrape_data)</code></pre>
+<pre><code>## [1] &quot;list&quot;</code></pre>
+<pre class="r"><code>summary(scrape_data$data$options)</code></pre>
+<pre><code>##     option               bid              bid_size           ask        
+##  Length:7032        Min.   :  0.0000   Min.   :  0.00   Min.   :  0.01  
+##  Class :character   1st Qu.:  0.8275   1st Qu.: 18.00   1st Qu.:  0.93  
+##  Mode  :character   Median : 12.5700   Median : 50.00   Median : 12.88  
+##                     Mean   : 38.3538   Mean   : 69.98   Mean   : 38.77  
+##                     3rd Qu.: 53.0650   3rd Qu.: 80.00   3rd Qu.: 53.66  
+##                     Max.   :320.6300   Max.   :901.00   Max.   :322.36  
+##     ask_size             iv         open_interest          volume       
+##  Min.   :   1.00   Min.   :0.0000   Min.   :     0.0   Min.   :    0.0  
+##  1st Qu.:  23.00   1st Qu.:0.2318   1st Qu.:     3.0   1st Qu.:    0.0  
+##  Median :  50.00   Median :0.2900   Median :   102.0   Median :    1.0  
+##  Mean   :  88.95   Mean   :0.3151   Mean   :  1640.3   Mean   :  329.4  
+##  3rd Qu.: 114.00   3rd Qu.:0.3689   3rd Qu.:   611.2   3rd Qu.:   35.0  
+##  Max.   :1108.00   Max.   :7.9639   Max.   :155487.0   Max.   :66784.0  
+##      delta              gamma              theta               rho           
+##  Min.   :-1.00000   Min.   :0.000000   Min.   :-0.50620   Min.   :-2.174600  
+##  1st Qu.:-0.85850   1st Qu.:0.000500   1st Qu.:-0.09273   1st Qu.:-0.112200  
+##  Median :-0.00005   Median :0.003200   Median :-0.03120   Median : 0.000000  
+##  Mean   :-0.16857   Mean   :0.005544   Mean   :-0.06387   Mean   :-0.008486  
+##  3rd Qu.: 0.15793   3rd Qu.:0.008200   3rd Qu.:-0.00670   3rd Qu.: 0.045300  
+##  Max.   : 1.00000   Max.   :0.060200   Max.   : 0.00000   Max.   : 2.375200  
+##       vega             theo              change              open        
+##  Min.   :0.0000   Min.   :  0.0000   Min.   :-12.0150   Min.   :  0.000  
+##  1st Qu.:0.0128   1st Qu.:  0.7524   1st Qu.:  0.0000   1st Qu.:  0.000  
+##  Median :0.1119   Median : 11.7170   Median :  0.0000   Median :  0.040  
+##  Mean   :0.2124   Mean   : 37.5137   Mean   :  0.4069   Mean   :  7.610  
+##  3rd Qu.:0.2991   3rd Qu.: 51.4188   3rd Qu.:  0.1150   3rd Qu.:  6.702  
+##  Max.   :1.4455   Max.   :320.7550   Max.   : 36.9100   Max.   :321.360  
+##       high              low              tick           last_trade_price  
+##  Min.   :  0.000   Min.   :  0.000   Length:7032        Min.   :  0.0000  
+##  1st Qu.:  0.000   1st Qu.:  0.000   Class :character   1st Qu.:  0.0875  
+##  Median :  0.050   Median :  0.030   Mode  :character   Median :  4.1900  
+##  Mean   :  7.937   Mean   :  7.397                      Mean   : 23.1862  
+##  3rd Qu.:  7.350   3rd Qu.:  6.000                      3rd Qu.: 27.6600  
+##  Max.   :321.360   Max.   :321.020                      Max.   :321.2500  
+##  last_trade_time    percent_change    prev_day_close   
+##  Length:7032        Min.   :-98.788   Min.   :  0.000  
+##  Class :character   1st Qu.:  0.000   1st Qu.:  0.795  
+##  Mode  :character   Median :  0.000   Median : 11.550  
+##                     Mean   :  6.577   Mean   : 36.234  
+##                     3rd Qu.: 11.902   3rd Qu.: 47.634  
+##                     Max.   :369.565   Max.   :309.595</code></pre>
+<pre class="r"><code>glimpse(scrape_data$data$options)</code></pre>
+<pre><code>## Rows: 7,032
+## Columns: 23
+## $ option           &lt;chr&gt; &quot;QQQ220613C00230000&quot;, &quot;QQQ220613P00230000&quot;, &quot;QQQ22061…
+## $ bid              &lt;dbl&gt; 59.11, 0.00, 54.11, 0.00, 49.11, 0.00, 44.11, 0.00, 3…
+## $ bid_size         &lt;dbl&gt; 50, 0, 50, 0, 75, 0, 50, 0, 45, 0, 45, 0, 50, 0, 75, …
+## $ ask              &lt;dbl&gt; 59.44, 0.01, 54.44, 0.01, 49.42, 0.01, 44.46, 0.02, 3…
+## $ ask_size         &lt;dbl&gt; 50, 106, 50, 85, 75, 70, 75, 212, 50, 5, 50, 81, 75, …
+## $ iv               &lt;dbl&gt; 1.7101, 0.8180, 1.5628, 0.7465, 1.4124, 0.6762, 1.285…
+## $ open_interest    &lt;dbl&gt; 0, 514, 0, 7, 0, 100, 0, 6, 0, 401, 0, 3, 0, 3, 0, 30…
+## $ volume           &lt;dbl&gt; 10, 1, 0, 0, 16, 0, 0, 200, 10, 401, 6, 4, 0, 1, 24, …
+## $ delta            &lt;dbl&gt; 0.9994, -0.0005, 0.9991, -0.0008, 0.9987, -0.0012, 0.…
+## $ gamma            &lt;dbl&gt; 0.0001, 0.0001, 0.0001, 0.0001, 0.0002, 0.0002, 0.000…
+## $ theta            &lt;dbl&gt; -0.0010, -0.0026, -0.0022, -0.0038, -0.0039, -0.0054,…
+## $ rho              &lt;dbl&gt; 0.0172, 0.0000, 0.0186, 0.0000, 0.0195, 0.0000, 0.020…
+## $ vega             &lt;dbl&gt; 0.0005, 0.0005, 0.0007, 0.0007, 0.0011, 0.0011, 0.001…
+## $ theo             &lt;dbl&gt; 60.1050, 0.0057, 55.1050, 0.0057, 50.1250, 0.0057, 45…
+## $ change           &lt;dbl&gt; -11.765, 0.005, 0.000, 0.000, -10.245, 0.000, 0.000, …
+## $ open             &lt;dbl&gt; 59.30, 0.01, 0.00, 0.00, 51.19, 0.00, 0.00, 0.01, 40.…
+## $ high             &lt;dbl&gt; 59.30, 0.01, 0.00, 0.00, 51.19, 0.00, 0.00, 0.01, 40.…
+## $ low              &lt;dbl&gt; 58.96, 0.01, 0.00, 0.00, 50.49, 0.00, 0.00, 0.01, 40.…
+## $ tick             &lt;chr&gt; &quot;down&quot;, &quot;no_change&quot;, &quot;no_change&quot;, &quot;down&quot;, &quot;down&quot;, &quot;no…
+## $ last_trade_price &lt;dbl&gt; 58.96, 0.01, 0.00, 0.01, 50.49, 0.02, 0.00, 0.01, 40.…
+## $ last_trade_time  &lt;chr&gt; &quot;2022-06-10T12:24:25&quot;, &quot;2022-06-10T15:51:18&quot;, NA, &quot;20…
+## $ percent_change   &lt;dbl&gt; -16.6349, 100.0000, 0.0000, 0.0000, -16.8684, 0.0000,…
+## $ prev_day_close   &lt;dbl&gt; 70.725, 0.005, 65.725, 0.005, 60.735, 0.005, 55.765, …</code></pre>
 </div>
 </div>
 
