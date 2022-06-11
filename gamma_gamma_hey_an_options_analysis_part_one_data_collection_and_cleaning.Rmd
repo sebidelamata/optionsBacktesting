@@ -22,17 +22,6 @@ system(
 )
 ```
 
-#### System Level Dependencies
-
-```{r}
-
-system(
-  "dpkg --get-selections | grep -v deinstall",
-  intern = TRUE
-)
-
-```
-
 #### R Environment
 
 ```{r}
