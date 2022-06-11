@@ -338,6 +338,13 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::ho
 
 ```{r}
 
+library(getPass)
+library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(treemap)
+library(wesanderson)
+
 # set driver name
 driver_name <- dbDriver(drvName = "PostgreSQL")
 
