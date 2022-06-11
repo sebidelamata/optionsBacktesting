@@ -676,6 +676,56 @@ DBI::dbSendQuery(
 <pre class="r"><code>  # disconnect from database
   DBI::dbDisconnect(db)</code></pre>
 </div>
+<div id="appending-to-the-existing-postgresql-table-append_watchlist_data.r" class="section level3">
+<h3>Appending to the existing PostgreSQL table (append_watchlist_data.R)</h3>
+<pre class="r"><code>library(DBI)
+library(RPostgreSQL)
+
+source(&quot;/home/sebi/optionsBacktesting/grab_watchlist.R&quot;)
+
+
+append_watchlist_data &lt;- function(){
+  
+  # grab our watchlist data
+  watchlist_data &lt;- grab_watchlist()
+  
+  # establish driver name
+  driver_name &lt;- dbDriver(drvName = &quot;PostgreSQL&quot;)
+  
+  # create database connection
+  db &lt;- DBI::dbConnect(driver_name,
+                       dbname=&quot;sebi&quot;,
+                       host=&quot;localhost&quot;,
+                       port = 5432
+  )
+  
+  # append our scraped data to the table
+  DBI::dbWriteTable(
+    db,
+    name = &quot;watchlist_data&quot;,
+    value = watchlist_data,
+    row.names = FALSE,
+    append = TRUE
+  )
+  
+  # close database connection
+  DBI::dbDisconnect(db)
+}</code></pre>
+</div>
+<div id="only-scrape-for-data-on-market-days-trading_day_scheduler.r" class="section level3">
+<h3>Only scrape for data on market days (trading_day_scheduler.R)</h3>
+<pre class="r"><code>library(timeDate)
+
+source(&quot;/home/sebi/optionsBacktesting/append_watchlist_data.R&quot;)
+
+if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate::holidayNYSE()))){
+  append_watchlist_data()
+} else {
+  message(&quot;Market Closed Today&quot;)
+}</code></pre>
+<pre><code>## Market Closed Today</code></pre>
+<p>```</p>
+</div>
 </div>
 </div>
 
