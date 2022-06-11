@@ -11,7 +11,7 @@ In this first post in a series analyzing real-world derivatives data, we set up 
 
 ## Computing Environment
 
-### Hardware
+#### Hardware
 
 ```{r}
 
@@ -20,4 +20,25 @@ system(
   "cat /sys/firmware/devicetree/base/model",
   intern = TRUE
 )
+```
+
+#### System Level Dependencies
+
+```{r}
+
+system(
+  "dpkg --get-selections | grep -v deinstall",
+  intern = TRUE
+)
+
+```
+
+#### R Environment
+
+```{r}
+
+version
+
+installed.packages()[,3]
+
 ```
