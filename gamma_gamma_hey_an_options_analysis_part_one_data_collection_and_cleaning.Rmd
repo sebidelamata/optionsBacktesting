@@ -345,7 +345,9 @@ driver_name <- dbDriver(drvName = "PostgreSQL")
 db <- DBI::dbConnect(driver_name,
                      dbname = "sebi",
                      host = "192.168.0.12",
-                     port = 5432
+                     port = 5432,
+                     user = "sebi",
+                     password = getPass("Enter Password:")
 )
 
 res <- dbSendQuery(db, "SELECT * FROM watchlist_data;")
