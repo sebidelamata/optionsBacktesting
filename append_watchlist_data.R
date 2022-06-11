@@ -1,3 +1,4 @@
+library(DBI)
 library(RPostgreSQL)
 
 source("/home/sebi/optionsBacktesting/grab_watchlist.R")

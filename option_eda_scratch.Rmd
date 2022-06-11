@@ -6,6 +6,10 @@ library(RPostgreSQL)
 library(getPass)
 library(dplyr)
 library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(treemap)
+library(wesanderson)
 
 ```
 
@@ -32,14 +36,93 @@ dbDisconnect(db)
 
 ```{r}
 
-QQQ_330_calls <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$strike_price == 330 & data_pull$contract_type == "C",]
+QQQ_330_calls <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$strike_price == 330 & data_pull$contract_type == "C" & year(data_pull$expiration_date) == "2022" & data_pull$scrape_date == max(data_pull$scrape_date),]
 
 glimpse(QQQ_330_calls)
 
 ggplot(
   data = QQQ_330_calls,
-  aes(x = expiration_date, y = iv)
+  aes(x = expiration_date, y = ask - bid, color = "bid-ask spread")
   ) +
-  geom_line()
+  geom_line() +
+  geom_line(aes(y=iv, color = "iv"))
+
+```
+
+
+```{r}
+
+# look call vs puts same strike
+QQQ_330_strike <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$strike_price == 320 & year(data_pull$expiration_date) == "2022" & data_pull$scrape_date == max(data_pull$scrape_date),]
+
+
+ggplot(
+  data = QQQ_330_strike,
+  aes(x = expiration_date, y = (ask + bid)/2, color = contract_type)
+  ) +
+  geom_line() 
+
+
+
+```
+
+```{r}
+
+tickers <- as.character(unique(as.factor(data_pull$underlying_ticker)))
+
+recent_pull <- data_pull[data_pull$scrape_date == max(data_pull$scrape_date),]
+
+pcr_list <- data.frame(matrix(ncol = length(tickers), nrow = 1))
+colnames(pcr_list) <- tickers
+
+lapply(
+  1:length(tickers),
+  function(x){
+    column_name <- tickers[x]
+    if(sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "C","volume"]) != 0){
+      pcr_list[,column_name] <<- sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "P","volume"]) / sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "C","volume"])
+    } else {
+        pcr_list[,column_name] <<- NA
+      }
+  }
+)
+
+melted_pcr_list <- reshape2::melt(
+  na.omit(pcr_list),
+  variable.name = "Underlying",
+  value.name = "put_call_ratio"
+)
+
+melted_pcr_list$Underlying <- factor(
+  melted_pcr_list$Underlying, 
+  levels = melted_pcr_list$Underlying[order(melted_pcr_list$put_call_ratio)]
+  )
+
+ggplot(
+  data =melted_pcr_list,
+  aes(
+    y = Underlying,
+    x = put_call_ratio,
+    fill = Underlying
+  )
+) +
+  geom_bar(stat = "identity") +
+  ggtitle("Watchlist Put-Call Ratios")
+
+put_call_ratio_tmap <- treemap(
+  dtf = melted_pcr_list,
+  index = c("Underlying", "put_call_ratio"),
+  vSize = "put_call_ratio",
+  vColor = "put_call_ratio",
+  type = "index",
+  align.labels = list(
+    c("center", "center"),
+    c("left", "bottom")
+  ),
+  palette = "Reds",
+  title = "Watchlist Put-Call Ratios"
+)
+  
+  
 
 ```
