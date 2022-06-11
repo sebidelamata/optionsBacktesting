@@ -473,6 +473,8 @@ pre code {
 </div>
 <div id="scraping-options-data-from-the-cboe" class="section level2">
 <h2>Scraping options data from the CBOE</h2>
+<div id="scraping-a-single-ticker-scraper.r" class="section level3">
+<h3>Scraping a single ticker (scraper.R)</h3>
 <pre class="r"><code># import our libraries
 library(dplyr)</code></pre>
 <pre><code>## 
@@ -585,6 +587,58 @@ print(option_data[1,])</code></pre>
 ## 1         70.725           288.84          230             C               QQQ
 ##   expiration_date scrape_date
 ## 1      2022-06-13  2022-06-11</code></pre>
+</div>
+<div id="iterating-our-scraper-over-our-watchlist-grab_watchlist.r" class="section level3">
+<h3>Iterating our scraper over our watchlist (grab_watchlist.R)</h3>
+<pre class="r"><code># grab our scraper script
+source(&quot;/home/sebi/optionsBacktesting/scraper.R&quot;)</code></pre>
+<pre class="r"><code>  # declare the tickers we want in our watchlist
+watchlist &lt;- c(
+  &quot;QQQ&quot;,
+  &quot;SPY&quot;,
+  &quot;IWM&quot;,
+  &quot;SLYV&quot;,
+  &quot;FXI&quot;,
+  &quot;DIA&quot;,
+  &quot;ARKK&quot;,
+  &quot;FEZ&quot;,
+  &quot;EEM&quot;,
+  &quot;EWW&quot;,
+  &quot;EWZ&quot;,
+  &quot;XLB&quot;,
+  &quot;XLV&quot;,
+  &quot;XLU&quot;,
+  &quot;XLF&quot;,
+  &quot;XLI&quot;,
+  &quot;XOP&quot;,
+  &quot;GLD&quot;,
+  &quot;SLV&quot;,
+  &quot;TLT&quot;,
+  &quot;HYG&quot;
+)
+
+print(watchlist)</code></pre>
+<pre><code>##  [1] &quot;QQQ&quot;  &quot;SPY&quot;  &quot;IWM&quot;  &quot;SLYV&quot; &quot;FXI&quot;  &quot;DIA&quot;  &quot;ARKK&quot; &quot;FEZ&quot;  &quot;EEM&quot;  &quot;EWW&quot; 
+## [11] &quot;EWZ&quot;  &quot;XLB&quot;  &quot;XLV&quot;  &quot;XLU&quot;  &quot;XLF&quot;  &quot;XLI&quot;  &quot;XOP&quot;  &quot;GLD&quot;  &quot;SLV&quot;  &quot;TLT&quot; 
+## [21] &quot;HYG&quot;</code></pre>
+<pre class="r"><code>  # create an empty dataframe 
+  watchlist_data &lt;- data.frame()
+  
+  # for each ticker in the watchlist grab the option data
+  # and union it to the watchlist_data df
+  watchlist_data &lt;- do.call(
+    rbind,
+    lapply(
+      watchlist,
+      grab_option_data
+      )
+    )
+  
+print(unique(as.factor(watchlist_data$underlying_ticker)))</code></pre>
+<pre><code>##  [1] QQQ  SPY  IWM  SLYV FXI  DIA  ARKK FEZ  EEM  EWW  EWZ  XLB  XLV  XLU  XLF 
+## [16] XLI  XOP  GLD  SLV  TLT  HYG 
+## 21 Levels: QQQ SPY IWM SLYV FXI DIA ARKK FEZ EEM EWW EWZ XLB XLV XLU ... HYG</code></pre>
+</div>
 </div>
 </div>
 
