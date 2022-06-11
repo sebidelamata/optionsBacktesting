@@ -15,7 +15,7 @@ In this first post in a series analyzing real-world derivatives data, we set up 
 
 ```{r}
 
-print(
+message(
   system(
     "cat /sys/firmware/devicetree/base/model"
   )
