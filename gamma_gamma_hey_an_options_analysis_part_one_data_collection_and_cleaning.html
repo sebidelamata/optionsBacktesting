@@ -572,7 +572,19 @@ option_data &lt;- as.data.frame(
   option_data$option &lt;- paste0(
     option_data$option,
     as.character(Sys.Date())
-  )</code></pre>
+  )
+  
+print(option_data[1,])</code></pre>
+<pre><code>##                         option   bid bid_size   ask ask_size     iv
+## 1 QQQ220613C002300002022-06-11 59.11       50 59.44       50 1.7101
+##   open_interest volume  delta gamma  theta    rho  vega   theo  change open
+## 1             0     10 0.9994 1e-04 -0.001 0.0172 5e-04 60.105 -11.765 59.3
+##   high   low tick last_trade_price     last_trade_time percent_change
+## 1 59.3 58.96 down            58.96 2022-06-10 12:24:25       -16.6349
+##   prev_day_close underlying_close strike_price contract_type underlying_ticker
+## 1         70.725           288.84          230             C               QQQ
+##   expiration_date scrape_date
+## 1      2022-06-13  2022-06-11</code></pre>
 </div>
 </div>
 

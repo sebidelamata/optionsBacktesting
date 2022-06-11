@@ -45,6 +45,8 @@ installed.packages()[,3]
 
 ## Scraping options data from the CBOE
 
+### Scraping a single ticker (scraper.R)
+
 ```{r}
 # import our libraries
 library(dplyr)
@@ -150,5 +152,64 @@ print(option_data$option[1])
   )
   
 print(option_data[1,])
+
+```
+
+### Iterating our scraper over our watchlist (grab_watchlist.R)
+
+```{r}
+
+# grab our scraper script
+source("/home/sebi/optionsBacktesting/scraper.R")
+
+```
+
+```{r}
+
+
+  # declare the tickers we want in our watchlist
+watchlist <- c(
+  "QQQ",
+  "SPY",
+  "IWM",
+  "SLYV",
+  "FXI",
+  "DIA",
+  "ARKK",
+  "FEZ",
+  "EEM",
+  "EWW",
+  "EWZ",
+  "XLB",
+  "XLV",
+  "XLU",
+  "XLF",
+  "XLI",
+  "XOP",
+  "GLD",
+  "SLV",
+  "TLT",
+  "HYG"
+)
+
+print(watchlist)
+
+```
+  
+```{r}
+  # create an empty dataframe 
+  watchlist_data <- data.frame()
+  
+  # for each ticker in the watchlist grab the option data
+  # and union it to the watchlist_data df
+  watchlist_data <- do.call(
+    rbind,
+    lapply(
+      watchlist,
+      grab_option_data
+      )
+    )
+  
+print(unique(as.factor(watchlist_data$underlying_ticker)))
 
 ```
