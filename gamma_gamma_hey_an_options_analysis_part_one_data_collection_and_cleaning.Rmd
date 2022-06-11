@@ -15,8 +15,9 @@ In this first post in a series analyzing real-world derivatives data, we set up 
 
 ```{r}
 
-system(
-  "cat /sys/firmware/devicetree/base/model"
+print(
+  system(
+    "cat /sys/firmware/devicetree/base/model"
+  )
 )
-
 ```
