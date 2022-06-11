@@ -15,9 +15,9 @@ In this first post in a series analyzing real-world derivatives data, we set up 
 
 ```{r}
 
-message(
-  system(
-    "cat /sys/firmware/devicetree/base/model"
-  )
+
+system(
+  "cat /sys/firmware/devicetree/base/model",
+  intern = TRUE
 )
 ```
