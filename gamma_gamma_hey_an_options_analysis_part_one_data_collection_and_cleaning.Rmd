@@ -199,7 +199,12 @@ print(watchlist)
 ```{r}
   # create an empty dataframe 
   watchlist_data <- data.frame()
+
+  summary(watchlist_data)
   
+```
+
+```{r}
   # for each ticker in the watchlist grab the option data
   # and union it to the watchlist_data df
   watchlist_data <- do.call(
@@ -209,7 +214,68 @@ print(watchlist)
       grab_option_data
       )
     )
-  
+
 print(unique(as.factor(watchlist_data$underlying_ticker)))
+```
+
+```{r}
+# number of rows for a single day's pull
+nrow(watchlist_data)
+
+```
+
+### Creating a table in PostgreSQL (create_watchlist_table.R)
+
+```{r}
+
+library(RPostgreSQL)
+
+source("/home/sebi/optionsBacktesting/grab_watchlist.R")
+```
+
+```{r eval=FALSE}
+
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
+  
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+		     dbname="sebi",
+		     host="localhost",
+		     port = 5432
+		     )
+```
+
+```{r eval=FALSE}
+
+# grab todays watchlist data
+watchlist_data <- grab_watchlist()
+
+```  
+  
+```{r eval=FALSE}
+
+# create our table with todays data (overwrite if already exists)
+DBI::dbWriteTable(
+  db,
+  value =  watchlist_data,
+  name = "watchlist_data",
+  overwrite = TRUE,
+  row.names = FALSE
+)
+```
+
+
+```{r eval=FALSE}  
+# set primary key column
+DBI::dbSendQuery(
+    db,
+    'ALTER TABLE watchlist_data ADD PRIMARY KEY ("option")'
+    )
+```
+
+```{r eval=FALSE}
+  # disconnect from database
+  DBI::dbDisconnect(db)
 
 ```
