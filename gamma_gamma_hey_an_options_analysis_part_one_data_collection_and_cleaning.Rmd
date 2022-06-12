@@ -71,7 +71,7 @@ installed.packages()[,3]
 
 #### Before we proceed
 
-	A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more heavy lifting on a more powerful machine.
+A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more heavy lifting on a more powerful machine.
 
 ## Setting up Postgresql
 
