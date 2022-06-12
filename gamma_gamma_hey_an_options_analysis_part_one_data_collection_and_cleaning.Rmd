@@ -465,7 +465,8 @@ ggplot(
   theme_minimal() +
   theme(legend.position = "none") +
   scale_fill_manual(values = colorRampPalette(wes_palettes$Rushmore1)(nrow(melted_pcr_list))) +
-  xlab("Put Call Ratio")
+  xlab("Put Call Ratio") +
+  ylab(expression( "Bullish "%->%" Bearish"))
 
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
@@ -479,7 +480,7 @@ put_call_ratio_tmap <- treemap(
   ),
   palette = "Reds",
   title = "Watchlist Put-Call Ratios"
-)
+) 
   
   
 
