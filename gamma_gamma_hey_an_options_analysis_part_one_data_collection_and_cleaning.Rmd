@@ -1,6 +1,6 @@
 ---
 output: html_document
-title: 'Gamma Gamma Hey (an options analysis) Part One/: Primary Data Collection and Cleaning'
+#title: 'Gamma Gamma Hey (an options analysis) Part One/: Primary Data Collection and Cleaning'
 layout: post
 ---
 
@@ -18,6 +18,8 @@ layout: post
 In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE open access API and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data. 
 
 ## Background
+
+
 
 ## Computing Environment
 
@@ -195,8 +197,6 @@ watchlist <- c(
   "TLT",
   "HYG"
 )
-
-print(watchlist)
 
 ```
   
@@ -459,7 +459,10 @@ ggplot(
   )
 ) +
   geom_bar(stat = "identity") +
-  ggtitle("Watchlist Put-Call Ratios")
+  ggtitle("Watchlist Put-Call Ratios") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_continuous(wes_palettes$BottleRocket1)
 
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
