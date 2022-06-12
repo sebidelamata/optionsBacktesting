@@ -15,11 +15,11 @@ layout: post
 
 ## Abstract
 
-In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE website and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data. 
+In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a `cron` job are used to automate scraping data from the CBOE website and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data. 
 
 ## Background
 
-I have been doing some thinking over the past months about how previous projects have been guilty of trying to cover too much ground at once. You take some data, you slap a model on it, voila! A true data project should be more than that. It should grow in time with your understanding of the data. To truly understand that data requires more than just a one-off project and a bit of research. It is with this intention that I aim to start this post as a series going through the entire lifecycle of a data project, from inception and data sourcing to advanced models and system maintenance. In this first post we will start our journey at a carte blanche. We have no fancy models. We have no data. We have nothing except a Raspberry Pi 4 and a curiosity about options.
+I have been doing some thinking over the past months about how my previous projects have been guilty of trying to cover too much ground at once. You take some data, you slap a model on it, voila! A true data project should be more than that. It should grow in time with your understanding of the data. To truly understand that data requires more than just a one-off project and a bit of research. It is with this intention that I aim to start this post as a series going through the entire lifecycle of a data project, from inception and data sourcing to advanced models and system maintenance. In this first post we will start our journey at a carte blanche. We have no fancy models. We have no data. We have nothing except a Raspberry Pi 4 and a curiosity about options.
 The options market can be a (very dangerous) playground for a statistics nerd. Plenty of APIs can be found for finding stock data in R with some readily available libraries. Considerably less sources exist for options, but I am spoiled. I don't want Yahoo Finance data on an API someone else built. Why have room temperature Dasani when you can go drink from an Alpine spring? I want the source! Bring me to Pablo! This being said, the only rational conclusion is to scrape data directly from the CBOE ourselves. I don't just want this data for today, nor do I want the limited historical data being offered. Predictably, that will cost you. This is not a good start for an enterprise aimed primarily at not losing money! We may not be able to do this for past data (or tick-level data), but one solution is to create our own database, starting today.   
 
 ## Setting up the Raspberry Pi and R shiny Server
@@ -73,9 +73,9 @@ installed.packages()[,3]
 
 A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more in the way of heavy lifting on a more powerful machine.
 
-## Setting up Postgresql
+## Setting up PostgreSQL
 
-So now we have a situation where we will ideally be collecting an ever increasing amount of data. Saving this data as an Rdata object or a csv will quickly add up in terms of memory, and we would be stuck import all of the data before we could filter out what we wanted, which would slow down any analysis that uses it every time we want to call this object from memory. In addition, we previously stated that we wanted to be able to do more advanced models on other machines. Sending a large data file through SCP is tedious and tough to replicate at scale. The PostgreSQL is a light RDBMS that is already included in our Shiny build, so let's just use that. We will be using the public schema, but be sure to set up a db before proceeding. R has many packages that will allow users to connect to a PostgreSQL database. We will be using RPostgreSQL and DBI, but there are others.
+So now we have a situation where we will ideally be collecting an ever increasing amount of data. Saving this data as an `.Rdata` object or a `.csv` will quickly add up in terms of memory, and we would be stuck import all of the data before we could filter out what we wanted, which would slow down any analysis that uses it every time we want to call this object from memory. In addition, we previously stated that we wanted to be able to do more advanced models on other machines. Sending a large data file through SCP is tedious and tough to replicate at scale. The PostgreSQL is a light RDBMS that is already included in our Shiny build, so let's just use that. We will be using the public schema, but be sure to set up a `db` before proceeding. R has many packages that will allow users to connect to a PostgreSQL database. We will be using `RPostgreSQL` and `DBI`, but there are others.
 
 ## Scraping options data from the CBOE
 
@@ -165,12 +165,12 @@ We can also grab some useful data about the underlying from a different part of 
 
 ```{r}
 
-# grab umderlying close
+# grab underlying close
 option_data$underlying_close <- scrape_data$data$close
 
 ```
 
-Let's take a look at the collumn of our data.
+Let's take a look at the column of our data.
 
 ```{r}
 
@@ -178,7 +178,7 @@ print(option_data$option[1])
 
 ```
 
-This doesn't look all that informative on the surface, but this actually has a lot of information. If you look at the above, `QQQ` represents the underlying `22` represents the year of expiration, `06` the month, `13` the day, `c` whether it is a call or a put, and `00230000` represents the $230.00 strike. Let's create some more useful columns from this.
+This doesn't look all that informative on the surface, but this actually has a lot of information. If you look at the above, `QQQ` represents the underlying, `22` represents the year of expiration, `06` the month, `13` the day, `c` whether it is a call or a put, and `00230000` represents the $230.00 strike. Let's create some more useful columns from this.
 
 
 ```{r}
@@ -342,7 +342,7 @@ db <- DBI::dbConnect(driver_name,
 ```
 
 
-We run our `grab_watchlist()` function to grab today's data
+We run our `grab_watchlist()` function to grab today's data.
 
 
 ```{r eval=FALSE}
@@ -352,7 +352,7 @@ watchlist_data <- grab_watchlist()
 
 ```  
   
-We only intend to build this table once, for the following days we will append to this table. However, we do want to standardize this procedure. The script to create a table will also allow overwriting of existing data. We do not need to worry about defining the shema (will be saved in `public`) nor whether a column is `VARCHAR(9)` or `VARCHAR(10)`. `R` will handle all of this for us.
+We only intend to build this table once, for the following days we will append to this table. However, we do want to standardize this procedure. The script to create a table will also allow overwriting of existing data. We do not need to worry about defining the schema (will be saved in `public`) nor whether a column is `VARCHAR(9)` or `VARCHAR(10)`. `R` will handle all of this for us.
   
 ```{r eval=FALSE}
 
@@ -454,7 +454,7 @@ Automating the task is as simple as setting up a `cron` job. Make sure to do thi
 - The market will be closed
 - 10:31 PM is when I stopped messing up the command.
 
-The second part of our `cron` job tells our Raspberry Pi what to do at that time. In this case, first `cd /home/sebi/optionsBacktesting` change directory, then `Rscript trading_day_scheduler.R` run the `R` script `trading_day_scheduler.R` (to see if the market is open and add data to the PostgreSQL database if it is. The final part `> log.txt 2>&1` send any terminal information to a log file we created.
+The second part of our `cron` job tells our Raspberry Pi what to do at that time. In this case, first change directory (`cd /home/sebi/optionsBacktesting`) , then run the `R` script `trading_day_scheduler.R` to see if the market is open and add data to the PostgreSQL database if it is(`Rscript trading_day_scheduler.R`). The final part (`> log.txt 2>&1`) sends any terminal information to a log file we created.
 
 ```{r}
 
@@ -487,7 +487,6 @@ library(getPass)
 library(ggplot2)
 library(lubridate)
 library(reshape2)
-library(treemap)
 library(wesanderson)
 library(RColorBrewer)
 
@@ -550,7 +549,7 @@ print(pcr_list)
 ```
 
 
-Right away we can create a tool more useful than what I can currently get from my Fidelity Active Trader Pro software. Instead of just displaying the put-call ratio for a single underlying, we can do this for every underlying in our watchlist. Since our watchlist consists of ETFs covering certain sectors and assets classes this can give us a pretty good picture of what is going on in the market today. First let's melt our data.
+Right away we can create a tool more useful than what I can currently get from my Fidelity Active Trader Pro software. Instead of just displaying the put-call ratio for a single underlying, we can do this for every underlying in our watchlist. Since our watchlist consists of ETFs covering certain sectors and asset classes this can give us a pretty good picture of what is going on in the market today. First let's melt our data.
 
 ```{r}
 
@@ -590,21 +589,6 @@ ggplot(
   theme(legend.position = "none") +
   scale_fill_manual(values = colorRampPalette(wes_palettes$Rushmore1)(nrow(melted_pcr_list))) +
   xlab("Put Call Ratio")
-
-put_call_ratio_tmap <- treemap(
-  dtf = melted_pcr_list,
-  index = c("Underlying", "put_call_ratio"),
-  vSize = "put_call_ratio",
-  vColor = "put_call_ratio",
-  type = "index",
-  align.labels = list(
-    c("center", "center"),
-    c("left", "bottom")
-  ),
-  palette = "Reds",
-  title = "Watchlist Put-Call Ratios"
-) 
-  
   
 
 ```
