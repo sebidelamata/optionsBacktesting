@@ -449,6 +449,13 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::ho
 
 ### Setting up a cronjob to automate data scrapes
 
+Automating the task is as simple as setting up a `cron` job. Make sure to do this as the same user that as you intend to intend to launch the scripts. For the sake of not poking the bear we will only run this once a day. The beginning of our line  `31 22 * * *` means that I want the job to run at every day at 10:31 PM for two reasons:
+
+- The market will be closed
+- 10:31 PM is when I stopped messing up the command.
+
+The second part of our `cron` job tells our Raspberry Pi what to do at that time. In this case, first `cd /home/sebi/optionsBacktesting` change directory, then `Rscript trading_day_scheduler.R` run the `R` script `trading_day_scheduler.R` (to see if the market is open and add data to the PostgreSQL database if it is. The final part `> log.txt 2>&1` send any terminal information to a log file we created.
+
 ```{r}
 
 system(
@@ -457,6 +464,8 @@ system(
 )
 
 ```
+
+We've made a few scripts so far. Let's take a look at all of our files again.
 
 ```{r}
 
@@ -469,6 +478,8 @@ system(
 ```
 
 ### Performing an intial query from our database
+
+We've reached the end of the first phase. But you're not into data if your natural sense of curiosity doesn't start to tingle. Let's do an initial pull of data from our repository and build a visualization. We will use the package `getPass` to prompt the user to enter their credentials before accessing the database.
 
 ```{r}
 
@@ -499,6 +510,8 @@ dbDisconnect(db)
 
 ```
 
+Let's just look at the most recent day's data.
+
 ```{r}
 # make a vector of the tickers from the data fetch
 tickers <- as.character(unique(as.factor(data_pull$underlying_ticker)))
@@ -513,6 +526,9 @@ colnames(pcr_list) <- tickers
 print(pcr_list)
 
 ```
+
+
+Now let's calulate the volume of puts divided by the volume of calls for each ticker (the put-call ratio). The higher the number is, the more bearish sentiment was in the market that day (more puts than calls). A number higher than 0.7 is generally considered neutral-to-bearish. 
 
 ```{r}
 
@@ -533,6 +549,9 @@ print(pcr_list)
 
 ```
 
+
+Right away we can create a tool more useful than what I can currently get from my Fidelity Active Trader Pro software. Instead of just displaying the put-call ratio for a single underlying, we can do this for every underlying in our watchlist. Since our watchlist consists of ETFs covering certain sectors and assets classes this can give us a pretty good picture of what is going on in the market today. First let's melt our data.
+
 ```{r}
 
 
@@ -552,6 +571,8 @@ melted_pcr_list$Underlying <- factor(
 print(melted_pcr_list)
 
 ```
+
+Next let's plot our data as a bar chart so we can really see the differences. I used the `Rushmore1` palette from the `wesanderson` package because I am a shameless millennial. Until the next post, "I'll just go out the back window."
 
 ```{r}
 
