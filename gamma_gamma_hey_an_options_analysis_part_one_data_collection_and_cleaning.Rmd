@@ -450,7 +450,22 @@ print(melted_pcr_list)
 
 ```
 
-```{r}
+```{r, include=F, eval=FALSE}
+library(pdftools)
+library(png)
+library(knitr)
+oldHook <- knit_hooks$get("plot")
+knit_hooks$set(plot = function(x, options) {
+  fname  <- gsub("pdf", "png", x)
+  bitmap <- pdf_render_page(x, page = 1, dpi = 300)
+  png::writePNG(bitmap, fname)
+  oldHook(fname, options)
+})
+```
+
+
+
+```{r dev='png'}
 
 ggplot(
   data =melted_pcr_list,
