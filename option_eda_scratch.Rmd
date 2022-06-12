@@ -44,8 +44,7 @@ ggplot(
   data = QQQ_330_calls,
   aes(x = expiration_date, y = ask - bid, color = "bid-ask spread")
   ) +
-  geom_line() +
-  geom_line(aes(y=iv, color = "iv"))
+  geom_line()
 
 ```
 
