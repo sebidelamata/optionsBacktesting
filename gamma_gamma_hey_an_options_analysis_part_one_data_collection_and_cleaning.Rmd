@@ -5,7 +5,7 @@ layout: post
 ---
 
 
-# Part One: Primary Data Collection and Cleaning
+# Primary Data Collection and Cleaning
 
 
 
