@@ -31,6 +31,7 @@ system(
   "cat /sys/firmware/devicetree/base/model",
   intern = TRUE
 )
+
 ```
 
 #### R Environment
@@ -338,6 +339,18 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::ho
 }
 
 ```
+
+### Setting up a cronjob to automate data scrapes
+
+```{r}
+
+system(
+  "sudo crontab -u sebi -l",
+  intern = TRUE
+)
+
+```
+
 
 ### Performing an intial query from our database
 
