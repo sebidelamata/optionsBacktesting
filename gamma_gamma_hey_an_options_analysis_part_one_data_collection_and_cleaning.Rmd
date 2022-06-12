@@ -572,7 +572,7 @@ print(melted_pcr_list)
 
 ```
 
-Next let's plot our data as a bar chart so we can really see the differences. I used the `Rushmore1` palette from the `wesanderson` package because I am a shameless millennial. Until the next post, "I'll just go out the back window."
+Next let's plot our data as a bar chart so we can really see the differences. I used the `Rushmore1` palette from the `wesanderson` package because I am a shameless millennial. Until the next post, "I'll just go back out the window."
 
 ```{r}
 
