@@ -282,13 +282,16 @@ DBI::dbSendQuery(
 
 ### Appending to the existing PostgreSQL table (append_watchlist_data.R)
 
-```{r eval=FALSE}
+```{r}
 
 library(DBI)
 library(RPostgreSQL)
 
 source("/home/sebi/optionsBacktesting/grab_watchlist.R")
 
+```
+
+```{r eval=FALSE}
 
 append_watchlist_data <- function(){
   
