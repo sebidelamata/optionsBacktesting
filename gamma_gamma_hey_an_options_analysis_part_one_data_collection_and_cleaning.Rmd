@@ -450,15 +450,9 @@ print(melted_pcr_list)
 
 ```
 
-
-
 ```{r}
-library(png)
-library(grid)
-library(gridExtra)
 
-
-pc_bar_graph <- ggplot(
+ggplot(
   data =melted_pcr_list,
   aes(
     y = Underlying,
@@ -471,17 +465,8 @@ pc_bar_graph <- ggplot(
   theme_minimal() +
   theme(legend.position = "none") +
   scale_fill_manual(values = colorRampPalette(wes_palettes$Rushmore1)(nrow(melted_pcr_list))) +
-  xlab("Put Call Ratio") +
-  ylab(expression( "Bullish "%->%" Bearish"))
+  xlab("Put Call Ratio")
 
-
-plotK(pc_bar_graph)
-dev.print(png, "plot.png", width=480, height=480)
-img <- readPNG("plot.png")
-img <- rasterGrob(img)
-grid.draw(img)
-
-# same thing but with a treemap
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
   index = c("Underlying", "put_call_ratio"),
