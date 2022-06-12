@@ -450,24 +450,15 @@ print(melted_pcr_list)
 
 ```
 
-```{r, include=F}
-library(pdftools)
+
+
+```{r}
 library(png)
-library(knitr)
-oldHook <- knit_hooks$get("plot")
-knit_hooks$set(plot = function(x, options) {
-  fname  <- gsub("pdf", "png", x)
-  bitmap <- pdf_render_page(x, page = 1, dpi = 300)
-  png::writePNG(bitmap, fname)
-  oldHook(fname, options)
-})
-```
+library(grid)
+library(gridExtra)
 
 
-
-```{r dev=`tikz`}
-
-ggplot(
+pc_bar_graph <- ggplot(
   data =melted_pcr_list,
   aes(
     y = Underlying,
@@ -483,6 +474,14 @@ ggplot(
   xlab("Put Call Ratio") +
   ylab(expression( "Bullish "%->%" Bearish"))
 
+
+plotK(pc_bar_graph)
+dev.print(png, "plot.png", width=480, height=480)
+img <- readPNG("plot.png")
+img <- rasterGrob(img)
+grid.draw(img)
+
+# same thing but with a treemap
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
   index = c("Underlying", "put_call_ratio"),
