@@ -198,7 +198,7 @@ This doesn't look all that informative on the surface, but this actually has a l
     )
 ```
 
-Options data is unsurpisingly, not static. The value for the 330 call will be different (probably) tomorrow than it is today. We need to grab the date on the date that we scrape the data so we can tell when this data was taken. Let's create a column for that.
+Options data is unsurpisingly, not static. The value for the $330 call will be different (probably) tomorrow than it is today. We need to grab the date on the date that we scrape the data so we can tell when this data was taken. Let's create a column for that.
 
 ```{r}
 
@@ -221,12 +221,20 @@ option_data$option <- paste0(
   option_data$option,
   as.character(Sys.Date())
 )
-  
+
+```
+
+Let's take a look at our cleaned data. We can add more columns later, but this will be what will be stored in the PostgreSQL database.
+
+```{r}
+
 print(option_data[1,])
 
 ```
 
 ### Iterating our scraper over our watchlist (grab_watchlist.R)
+
+Scraping and storing data is nice, but I want to expand this to get all of the tickers on my watchlist. First we call the previous `scraper.R` file that defines our scraper function.
 
 ```{r}
 
@@ -234,6 +242,8 @@ print(option_data[1,])
 source("/home/sebi/optionsBacktesting/scraper.R")
 
 ```
+
+Due to restrictions from my job, these are all broad market ETFs. SLYV is notably less liquid than the others, but I sell covered calls against it, so why not include it too.
 
 ```{r}
 
@@ -265,6 +275,8 @@ watchlist <- c(
 
 ```
   
+We will want to create an empty dataframe where we will append the results of a call to `scraper.R` for each ticker.  
+
 ```{r}
   # create an empty dataframe 
   watchlist_data <- data.frame()
@@ -272,6 +284,8 @@ watchlist <- c(
   summary(watchlist_data)
   
 ```
+
+This simply iterates through our watchlist we created, and for every ticker we run `grab_option_data()` (the function we defined in `scraper.R`). This will return a dataframe, which we will then stick onto the bottom of our formerly empty data frame.
 
 ```{r}
   # for each ticker in the watchlist grab the option data
@@ -283,9 +297,17 @@ watchlist <- c(
       grab_option_data
       )
     )
+```
+
+Let's check the result of our pull to see all of the unique tickers in the dataframe we created. It should be the same as the watchlist we created.
+
+```{r}
 
 print(unique(as.factor(watchlist_data$underlying_ticker)))
+
 ```
+
+Pulling data for our whole watchlist produces about 49k rows.
 
 ```{r}
 # number of rows for a single day's pull
@@ -295,12 +317,16 @@ nrow(watchlist_data)
 
 ### Creating a table in PostgreSQL (create_watchlist_table.R)
 
+Now we know how to get the option data for every watchlist ticker for every expiration for every strike. But how do we get this into our PostgreSQL dataframe? First we load the `RPostgreSQL` library and call the `grab_watchlist.R` script containing our `grab_watchlist()` function.
+
 ```{r}
 
 library(RPostgreSQL)
 
 source("/home/sebi/optionsBacktesting/grab_watchlist.R")
 ```
+
+Next we need to declare our driver name, the name of our database, the host (I am running this markdown from the Raspberry Pi, hence `localhost`), and the port we wish to connect through. Normally the user would have to enter their username and password to access the database, but I can't stand around each day waiting to enter my password, nor am I going to put my credentials on the screen for you monsters, so I need to automate this too. Luckily, the [PostgreSQL documentation](https://www.postgresql.org/docs/current/libpq-pgpass.html){target="_blank"} very clearly shows how to set up a `.pgpass` file on the Raspberry Pi. Note that this is for local PostgreSQL access which I intend to automate. This can only be manually accessed by a user who would have logged in by entering their credentials. I will still require logging remotely to require manually entering the user and password at this point, but we will get to that later.
 
 ```{r eval=FALSE}
 
@@ -315,12 +341,18 @@ db <- DBI::dbConnect(driver_name,
 		     )
 ```
 
+
+We run our `grab_watchlist()` function to grab today's data
+
+
 ```{r eval=FALSE}
 
 # grab todays watchlist data
 watchlist_data <- grab_watchlist()
 
 ```  
+  
+We only intend to build this table once, for the following days we will append to this table. However, we do want to standardize this procedure. The script to create a table will also allow overwriting of existing data. We do not need to worry about defining the shema (will be saved in `public`) nor whether a column is `VARCHAR(9)` or `VARCHAR(10)`. `R` will handle all of this for us.
   
 ```{r eval=FALSE}
 
@@ -334,6 +366,7 @@ DBI::dbWriteTable(
 )
 ```
 
+We do need to define a primary key for the table, which we created from a combination of the option string and `scrape_date` earlier.
 
 ```{r eval=FALSE}  
 # set primary key column
@@ -342,6 +375,8 @@ DBI::dbSendQuery(
     'ALTER TABLE watchlist_data ADD PRIMARY KEY ("option")'
     )
 ```
+
+Let's be polite and disconnect from our database.
 
 ```{r eval=FALSE}
   # disconnect from database
@@ -359,6 +394,8 @@ library(RPostgreSQL)
 source("/home/sebi/optionsBacktesting/grab_watchlist.R")
 
 ```
+
+The append script looks pretty much the same, except with `append = TRUE` instead of `overwrite = TRUE`. This is the script that will run every day.
 
 ```{r eval=FALSE}
 
@@ -393,6 +430,8 @@ append_watchlist_data <- function(){
 ```
 
 ### Only scrape for data on market days (trading_day_scheduler.R)
+
+If we were to scrape this page on weekends, we would get the same result on Saturday as Friday because the market is closed. The same applies for market holidays. To prevent unnecessary duplicates, we only call this script when it is a weekday and not a holiday.
 
 ```{r}
 
