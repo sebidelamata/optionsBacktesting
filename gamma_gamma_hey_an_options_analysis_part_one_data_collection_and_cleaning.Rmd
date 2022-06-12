@@ -359,7 +359,7 @@ system(
 
 
 system(
-  "psql && select count(*) from watchlist_data; && select distinct(scrape_date) from watchlist_data; && \q",
+  "psql && select count(*) from watchlist_data; && select distinct(scrape_date) from watchlist_data; && \\q",
   intern = TRUE
 )
 
