@@ -774,6 +774,12 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate
 </div>
 <div id="setting-up-a-cronjob-to-automate-data-scrapes" class="section level3">
 <h3>Setting up a cronjob to automate data scrapes</h3>
+<p>Automating the task is as simple as setting up a <code>cron</code> job. Make sure to do this as the same user that as you intend to intend to launch the scripts. For the sake of not poking the bear we will only run this once a day. The beginning of our line <code>31 22 * * *</code> means that I want the job to run at every day at 10:31 PM for two reasons:</p>
+<ul>
+<li>The market will be closed</li>
+<li>10:31 PM is when I stopped messing up the command.</li>
+</ul>
+<p>The second part of our <code>cron</code> job tells our Raspberry Pi what to do at that time. In this case, first <code>cd /home/sebi/optionsBacktesting</code> change directory, then <code>Rscript trading_day_scheduler.R</code> run the <code>R</code> script <code>trading_day_scheduler.R</code> (to see if the market is open and add data to the PostgreSQL database if it is. The final part <code>&gt; log.txt 2&gt;&amp;1</code> send any terminal information to a log file we created.</p>
 <pre class="r"><code>system(
   &quot;sudo crontab -u sebi -l&quot;,
   intern = TRUE
@@ -802,32 +808,34 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate
 ## [22] &quot;# &quot;                                                                                            
 ## [23] &quot;31 22 * * * cd /home/sebi/optionsBacktesting &amp;&amp; Rscript trading_day_scheduler.R &gt; log.txt 2&gt;&amp;1&quot;
 ## [24] &quot;# m h  dom mon dow   command&quot;</code></pre>
+<p>We’ve made a few scripts so far. Let’s take a look at all of our files again.</p>
 <pre class="r"><code>system(
   &quot;ls -al /home/sebi/optionsBacktesting/&quot;,
   intern = TRUE
 )</code></pre>
-<pre><code>##  [1] &quot;total 944&quot;                                                                                                                 
-##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 12 14:27 .&quot;                                                                             
-##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 12 14:27 ..&quot;                                                                            
-##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 12 14:27 append_watchlist_data.R&quot;                                                       
-##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 12 14:27 create_watchlist_table.R&quot;                                                      
-##  [6] &quot;-rw-r--r--  1 sebi sebi 881367 Jun 12 14:27 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
-##  [7] &quot;-rw-r--r--  1 sebi sebi  19115 Jun 12 14:27 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
-##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 12 14:27 .git&quot;                                                                          
-##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 12 14:27 .gitignore&quot;                                                                    
-## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 12 14:27 grab_watchlist.R&quot;                                                              
-## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 12 14:27 log.txt&quot;                                                                       
-## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 12 14:27 option_eda_scratch.Rmd&quot;                                                        
-## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 12 14:27 optionsBacktesting.Rproj&quot;                                                      
-## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 12 14:27 psql_data_pull_test.R&quot;                                                         
-## [15] &quot;-rw-r--r--  1 sebi sebi    595 Jun 12 14:27 README.md&quot;                                                                     
-## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 12 14:27 scraper.R&quot;                                                                     
-## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 12 14:27 scratch_notebook.Rmd&quot;                                                          
-## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 12 14:27 test_postgresql.R&quot;                                                             
-## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 12 14:27 trading_day_scheduler.R&quot;</code></pre>
+<pre><code>##  [1] &quot;total 952&quot;                                                                                                                 
+##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 12 15:01 .&quot;                                                                             
+##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 12 15:01 ..&quot;                                                                            
+##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 12 15:01 append_watchlist_data.R&quot;                                                       
+##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 12 15:01 create_watchlist_table.R&quot;                                                      
+##  [6] &quot;-rw-r--r--  1 sebi sebi 885081 Jun 12 15:01 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
+##  [7] &quot;-rw-r--r--  1 sebi sebi  21341 Jun 12 15:01 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
+##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 12 15:01 .git&quot;                                                                          
+##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 12 15:01 .gitignore&quot;                                                                    
+## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 12 15:01 grab_watchlist.R&quot;                                                              
+## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 12 15:01 log.txt&quot;                                                                       
+## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 12 15:01 option_eda_scratch.Rmd&quot;                                                        
+## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 12 15:01 optionsBacktesting.Rproj&quot;                                                      
+## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 12 15:01 psql_data_pull_test.R&quot;                                                         
+## [15] &quot;-rw-r--r--  1 sebi sebi    595 Jun 12 15:01 README.md&quot;                                                                     
+## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 12 15:01 scraper.R&quot;                                                                     
+## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 12 15:01 scratch_notebook.Rmd&quot;                                                          
+## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 12 15:01 test_postgresql.R&quot;                                                             
+## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 12 15:01 trading_day_scheduler.R&quot;</code></pre>
 </div>
 <div id="performing-an-intial-query-from-our-database" class="section level3">
 <h3>Performing an intial query from our database</h3>
+<p>We’ve reached the end of the first phase. But you’re not into data if your natural sense of curiosity doesn’t start to tingle. Let’s do an initial pull of data from our repository and build a visualization. We will use the package <code>getPass</code> to prompt the user to enter their credentials before accessing the database.</p>
 <pre class="r"><code>library(getPass)
 library(ggplot2)
 library(lubridate)</code></pre>
@@ -859,6 +867,7 @@ dbClearResult(res)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>dbDisconnect(db)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<p>Let’s just look at the most recent day’s data.</p>
 <pre class="r"><code># make a vector of the tickers from the data fetch
 tickers &lt;- as.character(unique(as.factor(data_pull$underlying_ticker)))
 
@@ -874,6 +883,7 @@ print(pcr_list)</code></pre>
 ## 1  NA  NA  NA   NA  NA  NA   NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
 ##   TLT HYG
 ## 1  NA  NA</code></pre>
+<p>Now let’s calulate the volume of puts divided by the volume of calls for each ticker (the put-call ratio). The higher the number is, the more bearish sentiment was in the market that day (more puts than calls). A number higher than 0.7 is generally considered neutral-to-bearish.</p>
 <pre class="r"><code># calculate put call ratio for each ticker and add it to the put call ratio data frame
 lapply(
   1:length(tickers),
@@ -955,6 +965,7 @@ lapply(
 ## 1 4.414454 1.189949 6.290867 1.965305 0.9599455 4.549 4.712251 1.221854
 ##        GLD       SLV      TLT      HYG
 ## 1 0.371338 0.2026978 1.096202 7.565716</code></pre>
+<p>Right away we can create a tool more useful than what I can currently get from my Fidelity Active Trader Pro software. Instead of just displaying the put-call ratio for a single underlying, we can do this for every underlying in our watchlist. Since our watchlist consists of ETFs covering certain sectors and assets classes this can give us a pretty good picture of what is going on in the market today. First let’s melt our data.</p>
 <pre class="r"><code># melt our data for our plot
 melted_pcr_list &lt;- reshape2::melt(
   pcr_list[, colSums(is.na(pcr_list)) &lt; nrow(pcr_list)],
@@ -990,6 +1001,7 @@ print(melted_pcr_list)</code></pre>
 ## 18        SLV      0.2026978
 ## 19        TLT      1.0962025
 ## 20        HYG      7.5657157</code></pre>
+<p>Next let’s plot our data as a bar chart so we can really see the differences. I used the <code>Rushmore1</code> palette from the <code>wesanderson</code> package because I am a shameless millennial. Until the next post, “I’ll just go out the back window.”</p>
 <pre class="r"><code>ggplot(
   data =melted_pcr_list,
   aes(
