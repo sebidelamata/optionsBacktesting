@@ -405,9 +405,10 @@ print(pcr_list)
 
 ```{r}
 
+
 # melt our data for our plot
 melted_pcr_list <- reshape2::melt(
-  na.omit(pcr_list),
+  pcr_list[, colSums(is.na(pcr_list)) < nrow(pcr_list)],
   variable.name = "Underlying",
   value.name = "put_call_ratio"
 )
