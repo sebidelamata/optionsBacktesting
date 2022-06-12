@@ -759,16 +759,28 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate
 ## [23] &quot;31 22 * * * cd /home/sebi/optionsBacktesting &amp;&amp; Rscript trading_day_scheduler.R &gt; log.txt 2&gt;&amp;1&quot;
 ## [24] &quot;# m h  dom mon dow   command&quot;</code></pre>
 <pre class="r"><code>system(
-  &quot;psql &amp;&amp; select count(*) from watchlist_data; &amp;&amp; select distinct(scrape_date) from watchlist_data; &amp;&amp; \\q&quot;,
+  &quot;ls -al /home/sebi/optionsBacktesting/&quot;,
   intern = TRUE
 )</code></pre>
-<pre><code>## Warning in system(&quot;psql &amp;&amp; select count(*) from watchlist_data; &amp;&amp; select
-## distinct(scrape_date) from watchlist_data; &amp;&amp; \\q&quot;, : running command &#39;psql
-## &amp;&amp; select count(*) from watchlist_data; &amp;&amp; select distinct(scrape_date) from
-## watchlist_data; &amp;&amp; \q&#39; had status 2</code></pre>
-<pre><code>## character(0)
-## attr(,&quot;status&quot;)
-## [1] 2</code></pre>
+<pre><code>##  [1] &quot;total 956&quot;                                                                                                                 
+##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 11 19:10 .&quot;                                                                             
+##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 11 19:10 ..&quot;                                                                            
+##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 11 19:10 append_watchlist_data.R&quot;                                                       
+##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 11 19:10 create_watchlist_table.R&quot;                                                      
+##  [6] &quot;-rw-r--r--  1 sebi sebi 902744 Jun 11 19:10 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
+##  [7] &quot;-rw-r--r--  1 sebi sebi   8894 Jun 11 19:10 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
+##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 11 19:10 .git&quot;                                                                          
+##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 11 19:10 .gitignore&quot;                                                                    
+## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 11 19:10 grab_watchlist.R&quot;                                                              
+## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 11 19:10 log.txt&quot;                                                                       
+## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 11 19:10 option_eda_scratch.Rmd&quot;                                                        
+## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 11 19:10 optionsBacktesting.Rproj&quot;                                                      
+## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 11 19:10 psql_data_pull_test.R&quot;                                                         
+## [15] &quot;-rw-r--r--  1 sebi sebi     20 Jun 11 19:10 README.md&quot;                                                                     
+## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 11 19:10 scraper.R&quot;                                                                     
+## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 11 19:10 scratch_notebook.Rmd&quot;                                                          
+## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 11 19:10 test_postgresql.R&quot;                                                             
+## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 11 19:10 trading_day_scheduler.R&quot;</code></pre>
 </div>
 <div id="performing-an-intial-query-from-our-database" class="section level3">
 <h3>Performing an intial query from our database</h3>
