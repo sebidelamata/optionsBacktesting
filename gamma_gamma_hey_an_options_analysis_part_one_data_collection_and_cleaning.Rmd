@@ -374,6 +374,7 @@ library(lubridate)
 library(reshape2)
 library(treemap)
 library(wesanderson)
+library(RColorBrewer)
 
 # set driver name
 driver_name <- dbDriver(drvName = "PostgreSQL")
@@ -462,7 +463,8 @@ ggplot(
   ggtitle("Watchlist Put-Call Ratios") +
   theme_minimal() +
   theme(legend.position = "none") +
-  scale_fill_discrete(wes_palettes$BottleRocket1)
+  scale_fill_manual(values = colorRampPalette(wes_palettes$Rushmore1)(nrow(melted_pcr_list))) +
+  xlab("Put Call Ratio")
 
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
