@@ -450,7 +450,7 @@ print(melted_pcr_list)
 
 ```
 
-```{r, include=F, eval=FALSE}
+```{r, include=F}
 library(pdftools)
 library(png)
 library(knitr)
@@ -465,7 +465,7 @@ knit_hooks$set(plot = function(x, options) {
 
 
 
-```{r dev='png'}
+```{r dev=`tikz`}
 
 ggplot(
   data =melted_pcr_list,
