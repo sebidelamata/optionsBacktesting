@@ -42,7 +42,7 @@ system(
 
 #### Memory
 
- I am using a 128GB sd card to hold both the OS and all of our data (we will probably need to mount external storage eventually). For our operating system we want to choose the lightest possible while still being able to perform our task(s) at hand. We will be using Debian Bullseye.
+I am using a 128GB sd card to hold both the OS and all of our data (we will probably need to mount external storage eventually). For our operating system we want to choose the lightest possible while still being able to perform our task(s) at hand. We will be using Debian Bullseye.
  
 
 ```{r}
@@ -56,11 +56,11 @@ system(
 ```
 
 
-#### Setting up R Shiny Server
+#### Setting up the R Shiny Server
 
-	I followed this [guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi... but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
+I followed this [guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi, but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
 
-####
+
 ```{r}
 
 version[c(2,13)]
@@ -73,7 +73,7 @@ installed.packages()[,3]
 
 	A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more heavy lifting on a more powerful machine.
 
-## Setting Postgresql
+## Setting up Postgresql
 
 
 
