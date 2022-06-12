@@ -336,6 +336,8 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 & !(Sys.Date() %in% as.Date(timeDate::ho
 
 ```
 
+### Performing an intial query from our database
+
 ```{r}
 
 library(getPass)
@@ -361,5 +363,89 @@ res <- dbSendQuery(db, "SELECT * FROM watchlist_data;")
 data_pull <- dbFetch(res)
 dbClearResult(res)
 dbDisconnect(db)
+
+```
+
+```{r}
+# make a vector of the tickers from the data fetch
+tickers <- as.character(unique(as.factor(data_pull$underlying_ticker)))
+
+# grab just the options from the most recent pull
+recent_pull <- data_pull[data_pull$scrape_date == max(data_pull$scrape_date),]
+
+# a blank dataframe to hold our put call ratios
+pcr_list <- data.frame(matrix(ncol = length(tickers), nrow = 1))
+colnames(pcr_list) <- tickers
+
+print(pcr_list)
+
+```
+
+```{r}
+
+# calculate put call ratio for each ticker and add it to the put call ratio data frame
+lapply(
+  1:length(tickers),
+  function(x){
+    column_name <- tickers[x]
+    if(sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "C","volume"]) != 0){
+      pcr_list[,column_name] <<- sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "P","volume"]) / sum(recent_pull[recent_pull$underlying_ticker == column_name & recent_pull$contract_type == "C","volume"])
+    } else {
+        pcr_list[,column_name] <<- NA
+      }
+  }
+)
+
+print(pcr_list)
+
+```
+
+```{r}
+
+# melt our data for our plot
+melted_pcr_list <- reshape2::melt(
+  na.omit(pcr_list),
+  variable.name = "Underlying",
+  value.name = "put_call_ratio"
+)
+
+# turn the underlying ticker into a factor
+melted_pcr_list$Underlying <- factor(
+  melted_pcr_list$Underlying, 
+  levels = melted_pcr_list$Underlying[order(melted_pcr_list$put_call_ratio)]
+  )
+
+print(melted_pcr_list)
+
+```
+
+```{r}
+
+ggplot(
+  data =melted_pcr_list,
+  aes(
+    y = Underlying,
+    x = put_call_ratio,
+    fill = Underlying
+  )
+) +
+  geom_bar(stat = "identity") +
+  ggtitle("Watchlist Put-Call Ratios")
+
+put_call_ratio_tmap <- treemap(
+  dtf = melted_pcr_list,
+  index = c("Underlying", "put_call_ratio"),
+  vSize = "put_call_ratio",
+  vColor = "put_call_ratio",
+  type = "index",
+  align.labels = list(
+    c("center", "center"),
+    c("left", "bottom")
+  ),
+  palette = "Reds",
+  title = "Watchlist Put-Call Ratios"
+)
+  
+  
 
 ```
