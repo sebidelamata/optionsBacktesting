@@ -24,7 +24,7 @@ The options market can be a (very dangerous) playground for a statistics nerd. P
 
 ## Setting up the Raspberry Pi and R shiny Server
 
-The [Raspberry Pi](https://www.canakit.com/raspberry-pi-4-extreme-kit.html) is the perfect tool to carry out our scraping needs. It's portable (currently hidden behind a night stand), uses very little power, I don't have to keep my main laptop on all the time, and we can dedicate it solely to our project.
+The [Raspberry Pi](https://www.canakit.com/raspberry-pi-4-extreme-kit.html){target="_blank"} is the perfect tool to carry out our scraping needs. It's portable (currently hidden behind a night stand), uses very little power, I don't have to keep my main laptop on all the time, and we can dedicate it solely to our project.
 
 ```{r}
 
@@ -48,7 +48,7 @@ system(
 
 ```
  
-	I followed [this guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982) to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi... but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
+	I followed [this guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi... but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
 
 ```{r}
 
