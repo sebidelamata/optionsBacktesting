@@ -2,16 +2,11 @@
 
 <html>
 
-<head>
-
-<meta charset="utf-8" />
-<meta name="generator" content="pandoc" />
-<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
-
-
-
-
-<title>Gamma Gamma Hey (an options analysis) Part One:</title>
+---
+output: html_document
+title: 'Gamma Gamma Hey (an options analysis) Part One:'
+layout: post
+---
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -366,8 +361,8 @@ pre code {
 </div>
 
 
-<div id="part-one-primary-data-collection-and-cleaning" class="section level1">
-<h1>Part One: Primary Data Collection and Cleaning</h1>
+<div id="primary-data-collection-and-cleaning" class="section level1">
+<h1>Primary Data Collection and Cleaning</h1>
 <div id="abstract" class="section level2">
 <h2>Abstract</h2>
 <p>In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a <code>cron</code> job are used to automate scraping data from the CBOE website and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data.</p>
@@ -809,24 +804,24 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate
   intern = TRUE
 )</code></pre>
 <pre><code>##  [1] &quot;total 816&quot;                                                                                                                 
-##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 12 15:29 .&quot;                                                                             
-##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 12 15:29 ..&quot;                                                                            
-##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 12 15:29 append_watchlist_data.R&quot;                                                       
-##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 12 15:29 create_watchlist_table.R&quot;                                                      
-##  [6] &quot;-rw-r--r--  1 sebi sebi 747856 Jun 12 15:29 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
-##  [7] &quot;-rw-r--r--  1 sebi sebi  20943 Jun 12 15:29 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
-##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 12 15:29 .git&quot;                                                                          
-##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 12 15:29 .gitignore&quot;                                                                    
-## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 12 15:29 grab_watchlist.R&quot;                                                              
-## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 12 15:29 log.txt&quot;                                                                       
-## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 12 15:29 option_eda_scratch.Rmd&quot;                                                        
-## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 12 15:29 optionsBacktesting.Rproj&quot;                                                      
-## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 12 15:29 psql_data_pull_test.R&quot;                                                         
-## [15] &quot;-rw-r--r--  1 sebi sebi    595 Jun 12 15:29 README.md&quot;                                                                     
-## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 12 15:29 scraper.R&quot;                                                                     
-## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 12 15:29 scratch_notebook.Rmd&quot;                                                          
-## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 12 15:29 test_postgresql.R&quot;                                                             
-## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 12 15:29 trading_day_scheduler.R&quot;</code></pre>
+##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 12 15:32 .&quot;                                                                             
+##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 12 15:32 ..&quot;                                                                            
+##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 12 15:32 append_watchlist_data.R&quot;                                                       
+##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 12 15:32 create_watchlist_table.R&quot;                                                      
+##  [6] &quot;-rw-r--r--  1 sebi sebi 747733 Jun 12 15:32 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
+##  [7] &quot;-rw-r--r--  1 sebi sebi  20933 Jun 12 15:32 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
+##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 12 15:32 .git&quot;                                                                          
+##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 12 15:32 .gitignore&quot;                                                                    
+## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 12 15:32 grab_watchlist.R&quot;                                                              
+## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 12 15:32 log.txt&quot;                                                                       
+## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 12 15:32 option_eda_scratch.Rmd&quot;                                                        
+## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 12 15:32 optionsBacktesting.Rproj&quot;                                                      
+## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 12 15:32 psql_data_pull_test.R&quot;                                                         
+## [15] &quot;-rw-r--r--  1 sebi sebi    595 Jun 12 15:32 README.md&quot;                                                                     
+## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 12 15:32 scraper.R&quot;                                                                     
+## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 12 15:32 scratch_notebook.Rmd&quot;                                                          
+## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 12 15:32 test_postgresql.R&quot;                                                             
+## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 12 15:32 trading_day_scheduler.R&quot;</code></pre>
 </div>
 <div id="performing-an-intial-query-from-our-database" class="section level3">
 <h3>Performing an intial query from our database</h3>
