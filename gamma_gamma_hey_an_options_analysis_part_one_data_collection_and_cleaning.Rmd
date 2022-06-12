@@ -41,10 +41,10 @@ system(
 
 
 #### Memory
-```
+
  I am using a 128GB sd card to hold both the OS and all of our data (we will probably need to mount external storage eventually). For our operating system we want to choose the lightest possible while still being able to perform our task(s) at hand. We will be using Debian Bullseye.
  
-```
+
 ```{r}
 
 
