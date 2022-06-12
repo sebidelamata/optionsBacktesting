@@ -58,7 +58,7 @@ system(
 
 #### Setting up the R Shiny Server
 
-I followed this [guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi, but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
+I followed [this guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi, but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
 
 
 ```{r}
@@ -71,15 +71,19 @@ installed.packages()[,3]
 
 #### Before we proceed
 
-A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more heavy lifting on a more powerful machine.
+A couple of things to keep in mind when setting this up. Our Raspberry Pi is good for scraping, but its not going to be training neural nets anytime soon. We just want to use this to grab data and store it. We can still use the Raspberry Pi to do some simple plots (and create this Rmarkdown), but we are probably going to do anything more in the way of heavy lifting on a more powerful machine.
 
 ## Setting up Postgresql
 
-
+So now we have a situation where we will ideally be collecting an ever increasing amount of data. Saving this data as an Rdata object or a csv will quickly add up in terms of memory, and we would be stuck import all of the data before we could filter out what we wanted, which would slow down any analysis that uses it every time we want to call this object from memory. In addition, we previously stated that we wanted to be able to do more advanced models on other machines. Sending a large data file through SCP is tedious and tough to replicate at scale. The PostgreSQL is a light RDBMS that is already included in our Shiny build, so let's just use that. We will be using the public schema, but be sure to set up a db before proceeding. R has many packages that will allow users to connect to a PostgreSQL database. We will be using RPostgreSQL and DBI, but there are others.
 
 ## Scraping options data from the CBOE
 
+We can scrape data directly from the CBOE delayed quotes page. [Here is an example](https://www.cboe.com/delayed_quotes/spy/quote_table){target="_blank"} of the SPY option chain. This provides plenty of info, including calculating the Greeks for us. Unfortunately, the CBOE uses scripts on their page to prevent scrapers from getting their data. Fortunately, the internet exists. [Here is a link](https://www.youtube.com/watch?v=AyJInEA6-wo){target="_blank"} showing how to do this specifically to the CBOE. [Here is another link](https://www.youtube.com/watch?v=WPh6yuCQHBQ){target="_blank"} on how to scrape data from sites running scripts. Go nuts.
+
 ### Scraping a single ticker (scraper.R)
+
+To start we only need the `jsonlite` package to scrape, the others are for manipulation and cleaning.
 
 ```{r}
 # import our libraries
@@ -88,6 +92,8 @@ library(jsonlite)
 library(stringi)
 
 ```
+
+We create a variable called `ticker` to hold our desired value, then supply it to the string to make our ticker request.
 
 ```{r}
 
@@ -105,6 +111,8 @@ print(scrape_target)
 
 ```
 
+This will fetch data for every strike for every expiration for that ticker.
+
 ```{r}
 # next we read the json data at our scrape target
 scrape_data <- read_json(
@@ -114,6 +122,7 @@ scrape_data <- read_json(
 
 ```
 
+This returns a `list` object to us (think of it as `R`'s best approximation for `json` data nested structure).
 
 ```{r}
 
@@ -121,12 +130,15 @@ typeof(scrape_data)
 
 ```
 
+Let's take a quick look at where most of our useful data is housed.
 
 ```{r}
 
 glimpse(scrape_data$data$options)
 
 ```
+
+This is full of information, but we need to transform this into a dataframe so we can then store this into a similarly structured PostgreSQL database.
 
 ```{r}
 
@@ -135,23 +147,40 @@ option_data <- as.data.frame(
   scrape_data$data$options
 )
 
-  # clean last trade datetime from string
-  option_data$last_trade_time <- as.POSIXct(
-    option_data$last_trade_time, 
-    "%Y-%m-%dT%H:%M:%S", 
-    tz = "America/Chicago"
-    )
-  
-  # grab umderlying close
-  option_data$underlying_close <- scrape_data$data$close
 ```
-  
+
+We also need to change the datetime to an R datetime object.
+
+```{r}
+
+# clean last trade datetime from string
+option_data$last_trade_time <- as.POSIXct(
+  option_data$last_trade_time, 
+  "%Y-%m-%dT%H:%M:%S", 
+  tz = "America/Chicago"
+  )
+```
+
+We can also grab some useful data about the underlying from a different part of the nested data.
+
+```{r}
+
+# grab umderlying close
+option_data$underlying_close <- scrape_data$data$close
+
+```
+
+Let's take a look at the collumn of our data.
+
 ```{r}
 
 print(option_data$option[1])
 
 ```
-  
+
+This doesn't look all that informative on the surface, but this actually has a lot of information. If you look at the above, `QQQ` represents the underlying `22` represents the year of expiration, `06` the month, `13` the day, `c` whether it is a call or a put, and `00230000` represents the $230.00 strike. Let's create some more useful columns from this.
+
+
 ```{r}
   # grab our strike price from the option name string
   option_data$strike_price <- as.numeric(stri_sub(option_data$option, -8)) / 1000
@@ -169,21 +198,29 @@ print(option_data$option[1])
     )
 ```
 
+Options data is unsurpisingly, not static. The value for the 330 call will be different (probably) tomorrow than it is today. We need to grab the date on the date that we scrape the data so we can tell when this data was taken. Let's create a column for that.
+
 ```{r}
 
-  # if we want to set this up to scrape every day
-  # we need to create a column to record 
-  # on what day the data was scraped
-  option_data$scrape_date <- Sys.Date()
-  
-  # since we have already taken all the useful data
-  # from the option column, we can keep using it as
-  # a unique identifier for our table if we append
-  # the scrape date to the end of the string
-  option_data$option <- paste0(
-    option_data$option,
-    as.character(Sys.Date())
-  )
+# if we want to set this up to scrape every day
+# we need to create a column to record 
+# on what day the data was scraped
+option_data$scrape_date <- Sys.Date()
+
+```
+
+We can also use that original string from the first column as the primary key column in our PostgreSQL database. To make this our unique identifier, we append the date of the scrape to the end of the string to make each row unique based on a string combination of the underlying, expiration, strike, and scrape date.
+
+```{r}
+
+# since we have already taken all the useful data
+# from the option column, we can keep using it as
+# a unique identifier for our table if we append
+# the scrape date to the end of the string
+option_data$option <- paste0(
+  option_data$option,
+  as.character(Sys.Date())
+)
   
 print(option_data[1,])
 
