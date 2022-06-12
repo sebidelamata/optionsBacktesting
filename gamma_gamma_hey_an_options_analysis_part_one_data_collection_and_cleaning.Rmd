@@ -1,12 +1,9 @@
 ---
 output: html_document
-#title: 'Gamma Gamma Hey (an options analysis) Part One/: Primary Data Collection and Cleaning'
+title: 'Gamma Gamma Hey (an options analysis) Part One:'
 layout: post
 ---
 
-# Gamma Gamma Hey 
-
-## (an options analysis) 
 
 # Part One: Primary Data Collection and Cleaning
 
