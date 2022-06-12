@@ -462,7 +462,7 @@ ggplot(
   ggtitle("Watchlist Put-Call Ratios") +
   theme_minimal() +
   theme(legend.position = "none") +
-  scale_fill_continuous(wes_palettes$BottleRocket1)
+  scale_fill_discrete(wes_palettes$BottleRocket1)
 
 put_call_ratio_tmap <- treemap(
   dtf = melted_pcr_list,
