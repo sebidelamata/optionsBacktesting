@@ -28,6 +28,7 @@ The options market can be a (very dangerous) playground for a statistics nerd. P
 
 The [Raspberry Pi](https://www.canakit.com/raspberry-pi-4-extreme-kit.html){target="_blank"} is the perfect tool to carry out our scraping needs. It's portable (currently hidden behind a night stand), uses very little power, I don't have to keep my main laptop on all the time, and we can dedicate it solely to our project.
 
+
 ```{r}
 
 
@@ -38,10 +39,12 @@ system(
 
 ```
 
-#### Memory
 
+#### Memory
+```
  I am using a 128GB sd card to hold both the OS and all of our data (we will probably need to mount external storage eventually). For our operating system we want to choose the lightest possible while still being able to perform our task(s) at hand. We will be using Debian Bullseye.
  
+```
 ```{r}
 
 
@@ -51,13 +54,13 @@ system(
 )
 
 ```
- 
+
+
 #### Setting up R Shiny Server
 
 	I followed [this guide](https://community.rstudio.com/t/setting-up-your-own-shiny-server-rstudio-server-on-a-raspberry-pi-3b/18982){target="_blank"} to install R shiny Server on a Raspberry Pi. There is an updated article that uses an Ansible build and would probably play much nicer with my 64-bit Raspberry Pi... but meh. The instructions work (mostly) and if you take enough stress-breaks you'll get there. The main work-around involves getting a 64-bit version of NGINX and node for arch instead of the 32-bit. Nothing too crazy. This does take about a day though, so make sure you bring snacks.
 
-
-
+####
 ```{r}
 
 version[c(2,13)]
