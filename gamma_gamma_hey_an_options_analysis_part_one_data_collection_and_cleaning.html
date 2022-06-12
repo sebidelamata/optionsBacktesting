@@ -375,10 +375,11 @@ pre code {
 <h1>Part One: Primary Data Collection and Cleaning</h1>
 <div id="abstract" class="section level2">
 <h2>Abstract</h2>
-<p>In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE open access API and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data.</p>
+<p>In this first post in a series analyzing real-world derivatives data, we set up a Raspberry Pi 4 with a R Shiny Server. R and shell scripts are used to create a table within the PostgreSQL database to hold the options data. Additional scripts and a cronjob are used to automate scraping data from the CBOE website and appending the data to the table in the PostgreSQL database. An R markdown is used to take an initial look at our data.</p>
 </div>
 <div id="background" class="section level2">
 <h2>Background</h2>
+<p>I have been doing some thinking over the past months about how previous projects have been guilty of trying to cover too much ground at once. You take some data, you slap a model on it, voila! A true data project should be more than that. It should grow in time with your understanding of the data. To truly understand that data requires more than just a one-off project and a bit of research. It is with this intention that I aim to start this post as a series going through the entire lifecycle of a data project, from inception and data sourcing to advanced models and system maintenance. In this first post we will start our journey at a carte blanche. We have no fancy models. We have no data. We have nothing except a Raspberry Pi 4 and a curiosity about options. The options market can be a (very dangerous) playground for a statistics nerd. Plenty of APIs can be found for finding stock data in R with some readily available libraries. Considerably less sources exist for options, but I am spoiled. I don’t want Yahoo Finance data on an API someone else built. Why have room temperature Dasani when you can go drink from an Alpine spring? I want the source! Bring me to Pablo! This being said, the only rational conclusion is to scrape data directly from the CBOE ourselves. I don’t just want this data for today, nor do I want the limited historical data being offered. Predictably, that will cost you. This is not a good start for an enterprise aimed primarily at not losing money! We may not be able to do this for past data (or tick-level data), but one solution is to create our own database, starting today.</p>
 </div>
 <div id="computing-environment" class="section level2">
 <h2>Computing Environment</h2>
@@ -583,7 +584,7 @@ option_data &lt;- as.data.frame(
   
 print(option_data[1,])</code></pre>
 <pre><code>##                         option   bid bid_size   ask ask_size     iv
-## 1 QQQ220613C002300002022-06-11 59.11       50 59.44       50 1.7101
+## 1 QQQ220613C002300002022-06-12 59.11       50 59.44       50 1.7101
 ##   open_interest volume  delta gamma  theta    rho  vega   theo  change open
 ## 1             0     10 0.9994 1e-04 -0.001 0.0172 5e-04 60.105 -11.765 59.3
 ##   high   low tick last_trade_price     last_trade_time percent_change
@@ -591,7 +592,7 @@ print(option_data[1,])</code></pre>
 ##   prev_day_close underlying_close strike_price contract_type underlying_ticker
 ## 1         70.725           288.84          230             C               QQQ
 ##   expiration_date scrape_date
-## 1      2022-06-13  2022-06-11</code></pre>
+## 1      2022-06-13  2022-06-12</code></pre>
 </div>
 <div id="iterating-our-scraper-over-our-watchlist-grab_watchlist.r" class="section level3">
 <h3>Iterating our scraper over our watchlist (grab_watchlist.R)</h3>
@@ -642,7 +643,7 @@ print(unique(as.factor(watchlist_data$underlying_ticker)))</code></pre>
 ## 21 Levels: QQQ SPY IWM SLYV FXI DIA ARKK FEZ EEM EWW EWZ XLB XLV XLU ... HYG</code></pre>
 <pre class="r"><code># number of rows for a single day&#39;s pull
 nrow(watchlist_data)</code></pre>
-<pre><code>## [1] 49272</code></pre>
+<pre><code>## [1] 49190</code></pre>
 </div>
 <div id="creating-a-table-in-postgresql-create_watchlist_table.r" class="section level3">
 <h3>Creating a table in PostgreSQL (create_watchlist_table.R)</h3>
@@ -758,24 +759,24 @@ if(as.POSIXlt(Sys.Date())$wday %in% 1:5 &amp; !(Sys.Date() %in% as.Date(timeDate
   intern = TRUE
 )</code></pre>
 <pre><code>##  [1] &quot;total 928&quot;                                                                                                                 
-##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 11 22:34 .&quot;                                                                             
-##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 11 22:34 ..&quot;                                                                            
-##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 11 22:34 append_watchlist_data.R&quot;                                                       
-##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 11 22:34 create_watchlist_table.R&quot;                                                      
-##  [6] &quot;-rw-r--r--  1 sebi sebi 872628 Jun 11 22:34 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
-##  [7] &quot;-rw-r--r--  1 sebi sebi   9079 Jun 11 22:34 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
-##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 11 22:34 .git&quot;                                                                          
-##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 11 22:34 .gitignore&quot;                                                                    
-## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 11 22:34 grab_watchlist.R&quot;                                                              
-## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 11 22:34 log.txt&quot;                                                                       
-## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 11 22:34 option_eda_scratch.Rmd&quot;                                                        
-## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 11 22:34 optionsBacktesting.Rproj&quot;                                                      
-## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 11 22:34 psql_data_pull_test.R&quot;                                                         
-## [15] &quot;-rw-r--r--  1 sebi sebi     20 Jun 11 22:34 README.md&quot;                                                                     
-## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 11 22:34 scraper.R&quot;                                                                     
-## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 11 22:34 scratch_notebook.Rmd&quot;                                                          
-## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 11 22:34 test_postgresql.R&quot;                                                             
-## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 11 22:34 trading_day_scheduler.R&quot;</code></pre>
+##  [2] &quot;drwxr-xr-x  3 sebi sebi   4096 Jun 12 09:24 .&quot;                                                                             
+##  [3] &quot;drwxr-xr-x 13 sebi sebi   4096 Jun 12 09:24 ..&quot;                                                                            
+##  [4] &quot;-rw-r--r--  1 sebi sebi    700 Jun 12 09:24 append_watchlist_data.R&quot;                                                       
+##  [5] &quot;-rw-r--r--  1 sebi sebi    836 Jun 12 09:24 create_watchlist_table.R&quot;                                                      
+##  [6] &quot;-rw-r--r--  1 sebi sebi 873319 Jun 12 09:24 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.html&quot;
+##  [7] &quot;-rw-r--r--  1 sebi sebi  10695 Jun 12 09:24 gamma_gamma_hey_an_options_analysis_part_one_data_collection_and_cleaning.Rmd&quot; 
+##  [8] &quot;drwxr-xr-x  8 sebi sebi   4096 Jun 12 09:24 .git&quot;                                                                          
+##  [9] &quot;-rw-r--r--  1 sebi sebi    570 Jun 12 09:24 .gitignore&quot;                                                                    
+## [10] &quot;-rw-r--r--  1 sebi sebi    718 Jun 12 09:24 grab_watchlist.R&quot;                                                              
+## [11] &quot;-rw-r--r--  1 sebi sebi      0 Jun 12 09:24 log.txt&quot;                                                                       
+## [12] &quot;-rw-r--r--  1 sebi sebi   2952 Jun 12 09:24 option_eda_scratch.Rmd&quot;                                                        
+## [13] &quot;-rw-r--r--  1 sebi sebi    205 Jun 12 09:24 optionsBacktesting.Rproj&quot;                                                      
+## [14] &quot;-rw-r--r--  1 sebi sebi    503 Jun 12 09:24 psql_data_pull_test.R&quot;                                                         
+## [15] &quot;-rw-r--r--  1 sebi sebi    595 Jun 12 09:24 README.md&quot;                                                                     
+## [16] &quot;-rw-r--r--  1 sebi sebi   1848 Jun 12 09:24 scraper.R&quot;                                                                     
+## [17] &quot;-rw-r--r--  1 sebi sebi    540 Jun 12 09:24 scratch_notebook.Rmd&quot;                                                          
+## [18] &quot;-rw-r--r--  1 sebi sebi    331 Jun 12 09:24 test_postgresql.R&quot;                                                             
+## [19] &quot;-rw-r--r--  1 sebi sebi    250 Jun 12 09:24 trading_day_scheduler.R&quot;</code></pre>
 </div>
 <div id="performing-an-intial-query-from-our-database" class="section level3">
 <h3>Performing an intial query from our database</h3>
