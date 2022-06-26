@@ -336,6 +336,8 @@ lineplot_profit <- function(profit_df, title){
   
   library(ggplot2)
   library(plotly)
+  library(scales)
+  library(wesanderson)
   
   profit_lineplot <- ggplot(
     data = profit_df,
@@ -344,12 +346,36 @@ lineplot_profit <- function(profit_df, title){
       y = possible_profits
     )
   ) +
-    geom_line() +
+    geom_line(color = wesanderson::wes_palette("Royal1")[3]) +
     ggtitle(title) +
     xlab("Possible Expiration Prices") +
     ylab("Profit (USD $)") +
-    theme_minimal()
-  
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      plot.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      axis.text.y = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      legend.position = "none",
+      text = element_text(color = wesanderson::wes_palette("Royal1")[3])
+      ) +
+    scale_y_continuous(
+      labels = scales::dollar_format(),
+      limits = c(
+        min(profit_df$possible_profits) - abs(0.2 * min(profit_df$possible_profits)),
+        max(profit_df$possible_profits) + (0.2 * max(profit_df$possible_profits))
+        )
+      ) +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    geom_hline(
+      yintercept = 0,
+      linetype = "dashed",
+      color = wesanderson::wes_palette("Royal1")[3]
+      ) +
+    scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
+    
   profit_lineplot <- plotly::ggplotly(profit_lineplot)
                       
   return(profit_lineplot)

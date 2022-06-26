@@ -1,53 +1,5 @@
 
 
-
-```{r echo=FALSE, warning=FALSE, message=FALSE}
-
-# source our scraper
-source("/home/sebi/optionsBacktesting/scraper.R")
-
-```
-
-```{r echo=FALSE, warning=FALSE, message=FALSE}
-
-watchlist <- c(
-  "QQQ",
-  "SPY",
-  "IWM",
-  "SLYV",
-  "FXI",
-  "DIA",
-  "ARKK",
-  "FEZ",
-  "EEM",
-  "EWW",
-  "EWZ",
-  "XLB",
-  "XLV",
-  "XLU",
-  "XLF",
-  "XLI",
-  "XOP",
-  "GLD",
-  "SLV",
-  "TLT",
-  "HYG"
-)
-
-watchlist_data <- data.frame()
-
-watchlist_data <- do.call(
-  rbind,
-  lapply(
-    watchlist,
-    grab_option_data
-    )
-  )
-
-glimpse(watchlist_data)
-
-```
-
 Grab fridays data
 
 ```{r}
@@ -96,13 +48,13 @@ data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
 # lets grab the QQQ Aug 19th calls
 sample_chain <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$expiration_date == as.Date("2022-08-19"),]
 
-long_call_strike <- 335
+long_call_strike <- 340
 
-short_call_strike <- 330
+short_call_strike <- 335
 
-long_put_strike <- 270
+long_put_strike <- 265
 
-short_put_strike <- 275
+short_put_strike <- 270
 
 sample_iron_condor <- iron_condor_profit(
   sample_chain, 
@@ -111,8 +63,6 @@ sample_iron_condor <- iron_condor_profit(
   long_put_strike,
   short_put_strike
   )
-
-sample_covered_call <- covered_call_profit(sample_chain, 330)
 
 lineplot_profit(sample_iron_condor, "Sample Iron Condor")
 
