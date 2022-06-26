@@ -47,3 +47,85 @@ watchlist_data <- do.call(
 glimpse(watchlist_data)
 
 ```
+
+Grab fridays data
+
+```{r}
+
+
+library(RPostgreSQL)
+library(getPass)
+
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
+
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+                     dbname = "sebi",
+                     host = "192.168.0.12",
+                     port = 5432,
+                     user = "sebi",
+                     password = getPass("Enter Password:")
+)
+
+# our query
+sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-06-24';"
+
+# combination of our connnection stuff and our query stuff
+res <- dbSendQuery(db, sql_query_string)
+
+# fetch our data query from the database and return a dataframe
+data_pull <- dbFetch(res)
+
+# clear our query results
+dbClearResult(res)
+
+# politely disconnect from the database
+dbDisconnect(db)
+
+```
+
+
+```{r}
+
+library(ggplot2)
+
+source("payout_functions.R")
+
+# create a mid price
+data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
+
+# lets grab the QQQ Aug 19th calls
+example_call <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$expiration_date == as.Date("2022-08-19") & data_pull$contract_type == "C",]
+
+example_strike_price <- 330
+
+possible_expiration_prices <- seq(250, 420, 0.1)
+
+possible_profits <- sapply(
+  possible_expiration_prices, 
+  function(x){
+    call_buyer_profit(x, strike_price = example_strike_price, example_call[example_call$strike_price == example_strike_price, "mid"])
+  }
+  )
+
+possible_call_buyer_profit <- data.frame(
+  possible_profits,
+  possible_expiration_prices
+)
+
+call_buyer_payoff_plot <- ggplot(
+  data = possible_call_buyer_profit,
+  aes(
+    x = possible_expiration_prices,
+    y = possible_profits
+    )
+) +
+  geom_line() +
+  ggtitle("Possible profits at expiration\nBuying QQQ $330 Aug 19th Call") +
+  xlab("Possible Expiration Prices") +
+  ylab("Profit (USD $)")
+
+call_buyer_payoff_plot
+
+```
