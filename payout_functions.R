@@ -75,7 +75,7 @@ create_possible_profit_df <- function(option_chain_df, FUN, input_strike_price){
   possible_expiration_prices <- seq(
     0, 
     max(option_chain_df[,"strike_price"]), 
-    0.05
+    0.01
   )
   
   # run profit function across possible expiration prices
@@ -268,5 +268,59 @@ iron_condor_profit <- function(
   )
   
   return(iron_condor_profit_df)
+  
+}
+
+
+
+
+# let's create a profit function for holding 100 shares
+buy_hundred_shares_profit <- function(option_chain_df){
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  buy_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (closing_price * 100) - (option_chain_df$underlying_close[1] * 100) 
+    }
+    )
+  
+  buy_hundred_shares_profit_df <- data.frame(
+    possible_closing_prices = possible_closing_prices,
+    possible_profits = buy_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(buy_hundred_shares_profit_df)
+  
+}
+
+
+
+# let's create a covered call
+covered_call_profit <- function(option_chain_df, short_call_strike_price){
+  
+  # short call profit df
+  short_call <- short_call_profit(
+    option_chain_df,
+    short_call_strike_price
+  )
+  
+  # 100 shares profit df
+  long_hundred_shares <- buy_hundred_shares_profit(
+  option_chain_df
+  )
+  
+  covered_call_profit_df <- data.frame(
+    possible_expiration_prices = short_call$possible_expiration_prices,
+    possible_profits = short_call$possible_profits + long_hundred_shares$possible_profits
+  )
   
 }

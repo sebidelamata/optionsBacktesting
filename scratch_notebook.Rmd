@@ -107,7 +107,7 @@ long_put_strike <- 270
 
 short_put_strike <- 275
 
-possible_call_buyer_profit <- iron_condor_profit(
+sample_iron_condor <- iron_condor_profit(
   sample_chain, 
   long_call_strike,
   short_call_strike,
@@ -115,8 +115,10 @@ possible_call_buyer_profit <- iron_condor_profit(
   short_put_strike
   )
 
+sample_covered_call <- covered_call_profit(sample_chain, 330)
+
 call_buyer_payoff_plot <- ggplot(
-  data = possible_call_buyer_profit,
+  data = sample_covered_call,
   aes(
     x = possible_expiration_prices,
     y = possible_profits
