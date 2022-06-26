@@ -88,9 +88,6 @@ dbDisconnect(db)
 
 ```{r}
 
-library(ggplot2)
-library(plotly)
-
 source("payout_functions.R")
 
 # create a mid price
@@ -117,20 +114,6 @@ sample_iron_condor <- iron_condor_profit(
 
 sample_covered_call <- covered_call_profit(sample_chain, 330)
 
-call_buyer_payoff_plot <- ggplot(
-  data = sample_covered_call,
-  aes(
-    x = possible_expiration_prices,
-    y = possible_profits
-    )
-) +
-  geom_line() +
-  scale_x_continuous(limits = c(200, 400)) +
-  ggtitle("Possible profits at expiration\nBuying QQQ $330 Aug 19th Call") +
-  xlab("Possible Expiration Prices") +
-  ylab("Profit (USD $)") +
-  theme_minimal()
-
-plotly::ggplotly(call_buyer_payoff_plot)
+lineplot_profit(sample_iron_condor, "Sample Iron Condor")
 
 ```

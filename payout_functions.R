@@ -11,11 +11,9 @@
 # max(0, ST – X)
 call_buyer_payoff <- function(underlying_price_expiration, strike_price){
   
-  #filter for calls
-  # underlying_price_expiration <- underlying_price_expiration["contract_type"] == "C"
-  
-  # either zero or the diference in the strike and expiration
+  # either zero or the difference in the strike and expiration
   max(0, underlying_price_expiration - strike_price)
+  
 }
 
 
@@ -324,3 +322,38 @@ covered_call_profit <- function(option_chain_df, short_call_strike_price){
   )
   
 }
+
+
+
+
+
+
+
+# plotting our payoff functions (plotly)
+# takes a profit df (2 columns profits and strikes)
+# and a Title for the plot
+lineplot_profit <- function(profit_df, title){
+  
+  library(ggplot2)
+  library(plotly)
+  
+  profit_lineplot <- ggplot(
+    data = profit_df,
+    aes(
+      x = possible_expiration_prices,
+      y = possible_profits
+    )
+  ) +
+    geom_line() +
+    ggtitle(title) +
+    xlab("Possible Expiration Prices") +
+    ylab("Profit (USD $)") +
+    theme_minimal()
+  
+  profit_lineplot <- plotly::ggplotly(profit_lineplot)
+                      
+  return(profit_lineplot)
+  
+}
+
+
