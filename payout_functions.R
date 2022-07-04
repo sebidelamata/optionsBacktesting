@@ -1,10 +1,41 @@
 
+
+library(dplyr)
 # these functions model how an option will pay out at a given strike price
 
 
 
 # this first set is assuming a vanilla European-style option
 
+# define intrinsic and extrinsic value for options
+# Call Option Intrinsic Value=USC−CS
+# where:
+#   USC=Underlying Stock’s Current Price
+# CS=Call Strike Price
+call_intrinsic_value <- function(option_chain_df, strike_price){
+  max(option_chain_df$underlying_close[1] - strike_price, 0) * 100
+}
+
+
+
+# now put option intrinsic value
+# Put Option Intrinsic Value=PS−USC
+put_intrinsic_value <- function(option_chain_df, strike_price){
+  max(strike_price - option_chain_df$underlying_close[1], 0) * 100
+}
+
+
+
+# extrinsic value is simply option price minus intrinsic value
+# first our call
+call_extrinsic_value <- function(option_chain_df, strike_price){
+  (100 * option_chain_df[option_chain_df$strike_price == strike_price & option_chain_df$contract_type == "C", "mid"]) - call_intrinsic_value(option_chain_df, strike_price)
+}
+
+# next our put
+put_extrinsic_value <- function(option_chain_df, strike_price){
+  (100 * option_chain_df[option_chain_df$strike_price == strike_price & option_chain_df$contract_type == "P", "mid"]) - put_intrinsic_value(option_chain_df, strike_price)
+}
 
 
 # The payoff for a call buyer at expiration date T is given by 
@@ -72,7 +103,7 @@ create_possible_profit_df <- function(option_chain_df, FUN, input_strike_price){
   # create a sequence of possible expiration prices
   possible_expiration_prices <- seq(
     0, 
-    max(option_chain_df[,"strike_price"]), 
+    max(option_chain_df[,"strike_price"] * 2), 
     0.01
   )
   
@@ -325,6 +356,46 @@ covered_call_profit <- function(option_chain_df, short_call_strike_price){
 
 
 
+# now we can model a bullish call diagonal
+call_diagonal_profit <- function(
+    long_call_option_chain_df, 
+    long_call_strike_price,
+    short_call_option_chain_df,
+    short_call_strike_price
+){
+  
+  # long call profit df
+  long_call <- long_call_profit(
+    long_call_option_chain_df,
+    long_call_strike_price
+  )
+  
+  # short call profit df
+  short_call <- short_call_profit(
+    short_call_option_chain_df, 
+    short_call_strike_price
+  )
+  
+  # merge different (probably) sized data frames so we can sum them
+  call_diagonal_profit_df <- merge(
+    long_call,
+    short_call,
+    by = "possible_expiration_prices",
+    suffixes = c("long", "short")
+  )
+  
+  
+  
+  # create our vertical profits which is the sum of the long and short legs
+  call_diagonal_profit_df <- data.frame(
+    possible_expiration_prices = call_diagonal_profit_df$possible_expiration_prices,
+    possible_profits = call_diagonal_profit_df$possible_profitslong + call_diagonal_profit_df$possible_profitsshort
+  )
+  
+  # return our dataframe
+  return(call_diagonal_profit_df)
+  
+}
 
 
 
@@ -365,7 +436,7 @@ lineplot_profit <- function(profit_df, title){
       labels = scales::dollar_format(),
       limits = c(
         min(profit_df$possible_profits) - abs(0.2 * min(profit_df$possible_profits)),
-        max(profit_df$possible_profits) + (0.2 * max(profit_df$possible_profits))
+        max(profit_df$possible_profits) + abs(0.2 * max(profit_df$possible_profits))
         )
       ) +
     scale_x_continuous(labels = scales::dollar_format()) +
@@ -375,7 +446,7 @@ lineplot_profit <- function(profit_df, title){
       color = wesanderson::wes_palette("Royal1")[3]
       ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
-    
+  
   profit_lineplot <- plotly::ggplotly(profit_lineplot)
                       
   return(profit_lineplot)

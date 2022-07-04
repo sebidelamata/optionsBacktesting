@@ -1,0 +1,157 @@
+---
+output: html_document
+title: 'Gamma Gamma Hey (an options analysis) Part Two:'
+layout: post
+---
+
+# Building Basic Options SME
+
+
+[Github link](https://github.com/sebidelamata/optionsBacktesting){target="_blank"}
+
+## Abstract
+
+In this post we will use data collected from [post one](https://sebidelamata.github.io/datascienceblog/2022/06/12/Gamma-Gamma-Hey-Part-One.html){target="_blank"} to educate ourselves on the basics behind option valuation as well as some common strategies used in option trading. To accomplish this we will be creating a series of functions as well as visualize some real world trades with Plotly. 
+
+## Single Option Valuation
+
+Equity options generally serve as a contract giving the owner the right to sell (a put) or buy (a call) 100 shares of the underlying at a given price. We will start of modeling these as European style options to start for the sake of simplicity. European options can be exercised at the date of expiration, where American style options allow for early exercise up to and including the date of expiration.
+
+### Call Options
+
+As stated before, equity call options give the owner the right buy 100 shares of the underlying at a given price. The value of this contract has a convex payoff structure compared to the underlying. The contract will be worth nothing if it expires before the underlying price has surpassed the strike price of the contract. It will otherwise be worth the difference between the market price of the underlying and the strike price of the contract. This basic payoff function can be modeled like so:
+
+```{r}
+
+library(dplyr)
+
+# The payoff for a call buyer at expiration date T is given by 
+# max(0, ST – X)
+call_buyer_payoff <- function(underlying_price_expiration, strike_price){
+  
+  # either zero or the difference in the strike and expiration
+  max(0, underlying_price_expiration - strike_price)
+  
+}
+
+```
+
+We can model the call buyer payoff for an at-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022.
+
+```{r}
+
+library(RPostgreSQL)
+library(getPass)
+
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
+
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+                     dbname = "sebi",
+                     host = "192.168.0.12",
+                     port = 5432,
+                     user = "sebi",
+                     password = getPass("Enter Password:")
+)
+
+# our query
+sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-07-01' AND underlying_ticker = 'QQQ' AND contract_type = 'C' AND expiration_date = '2023-01-20';"
+
+# combination of our connnection stuff and our query stuff
+res <- dbSendQuery(db, sql_query_string)
+
+# fetch our data query from the database and return a dataframe
+data_pull <- dbFetch(res)
+
+# clear our query results
+dbClearResult(res)
+
+# politely disconnect from the database
+dbDisconnect(db)
+
+# select the at the money
+qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280,]
+
+two_fifty_call_payoff <- sapply(
+  seq(250,400),
+  FUN = function(x){
+    call_buyer_payoff(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400)
+)
+
+# create a quick function to plot our payouts (we'll be doing a few)
+# plotting our payoff functions (plotly)
+# takes a profit df (2 columns profits and strikes)
+# and a Title for the plot
+lineplot_profit <- function(profit_df, title){
+  
+  library(ggplot2)
+  library(plotly)
+  library(scales)
+  library(wesanderson)
+  
+  profit_lineplot <- ggplot(
+    data = profit_df,
+    aes(
+      x = possible_expiration_prices,
+      y = possible_profits
+    )
+  ) +
+    geom_line(color = wesanderson::wes_palette("Royal1")[3]) +
+    ggtitle(title) +
+    xlab("Possible Expiration Prices") +
+    ylab("Profit (USD $)") +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      plot.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      axis.text.y = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      legend.position = "none",
+      text = element_text(color = wesanderson::wes_palette("Royal1")[3])
+      ) +
+    scale_y_continuous(
+      labels = scales::dollar_format(),
+      limits = c(
+        min(profit_df$possible_profits) - abs(0.2 * min(profit_df$possible_profits)),
+        max(profit_df$possible_profits) + abs(0.2 * max(profit_df$possible_profits))
+        )
+      ) +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    geom_hline(
+      yintercept = 0,
+      linetype = "dashed",
+      color = wesanderson::wes_palette("Royal1")[3]
+      ) +
+    scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
+  
+  profit_lineplot <- plotly::ggplotly(profit_lineplot)
+                      
+  return(profit_lineplot)
+  
+}
+
+# now let's plot our payout
+two_fifty_call_payoff <- lineplot_profit(
+  two_fifty_call_payoff, 
+  "Basic payoff, Jan 20th, 2023 280 Call"
+  )
+
+
+two_fifty_call_payoff
+
+```
+
+
