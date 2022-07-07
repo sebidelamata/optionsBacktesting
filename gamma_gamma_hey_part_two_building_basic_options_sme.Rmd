@@ -36,7 +36,7 @@ call_buyer_payoff <- function(underlying_price_expiration, strike_price){
 
 ```
 
-We can model the call buyer payoff for an at-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022.
+We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022. First, we need to grab the data from our PosgreSQL database.
 
 ```{r}
 
@@ -55,8 +55,8 @@ db <- DBI::dbConnect(driver_name,
                      password = getPass("Enter Password:")
 )
 
-# our query
-sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-07-01' AND underlying_ticker = 'QQQ' AND contract_type = 'C' AND expiration_date = '2023-01-20';"
+# our query (grab the whole option chain for that expiration)
+sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-07-01' AND underlying_ticker = 'QQQ' AND expiration_date = '2023-01-20';"
 
 # combination of our connnection stuff and our query stuff
 res <- dbSendQuery(db, sql_query_string)
@@ -70,11 +70,18 @@ dbClearResult(res)
 # politely disconnect from the database
 dbDisconnect(db)
 
+```
+
+Now we can apply our function to a series of possible expiration prices.
+
+
+```{r}
+
 # select the at the money
-qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280,]
+qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C",]
 
 two_fifty_call_payoff <- sapply(
-  seq(250,400),
+  seq(250,400, 0.01),
   FUN = function(x){
     call_buyer_payoff(
       underlying_price_expiration = x, 
@@ -86,14 +93,20 @@ two_fifty_call_payoff <- sapply(
 # create a df to hold values with possible strikes at expiration
 two_fifty_call_payoff <- data.frame(
   possible_profits = two_fifty_call_payoff,
-  possible_expiration_prices = seq(250, 400)
+  possible_expiration_prices = seq(250, 400, 0.01)
 )
+
+```
+
+Let's plot our potential payoffs.
+
+```{r}
 
 # create a quick function to plot our payouts (we'll be doing a few)
 # plotting our payoff functions (plotly)
 # takes a profit df (2 columns profits and strikes)
 # and a Title for the plot
-lineplot_profit <- function(profit_df, title){
+lineplot_profit <- function(profit_df, title, option_chain_df){
   
   library(ggplot2)
   library(plotly)
@@ -135,6 +148,12 @@ lineplot_profit <- function(profit_df, title){
       linetype = "dashed",
       color = wesanderson::wes_palette("Royal1")[3]
       ) +
+    geom_vline(
+      xintercept = option_chain_df$underlying_close[1],
+      linetype = "dashed",
+      color = "white",
+      size = 0.1
+    ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
   
   profit_lineplot <- plotly::ggplotly(profit_lineplot)
@@ -146,7 +165,8 @@ lineplot_profit <- function(profit_df, title){
 # now let's plot our payout
 two_fifty_call_payoff <- lineplot_profit(
   two_fifty_call_payoff, 
-  "Basic payoff, Jan 20th, 2023 280 Call"
+  "Payoff, Long the Jan 20th, 2023 $280 Call",
+  qqq_atm_call_jan_twenty
   )
 
 
@@ -154,4 +174,365 @@ two_fifty_call_payoff
 
 ```
 
+To clarify, the above shows the payoff on a per-share basis. This also excludes the price the call buyer has to pay for the contract (the premium). To incorporate the cost of the contract we can build the following function off of our previous function. 
 
+```{r}
+
+# profit is equal to payoff minus the initial premium
+call_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (call_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
+}
+
+```
+
+Notice that this function multiplies the outcome by 100, giving us the profit of the contract, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before.
+
+```{r}
+
+# first we have to create a mid price 
+qqq_atm_call_jan_twenty$mid <- qqq_atm_call_jan_twenty$ask + qqq_atm_call_jan_twenty$bid / 2
+
+# apply our profit function
+two_fifty_call_payoff <- sapply(
+  seq(250,400, 0.01),
+  FUN = function(x){
+    call_buyer_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price,
+      option_price = qqq_atm_call_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_call_profit <- lineplot_profit(
+  two_fifty_call_payoff, 
+  "Profit, Long the Jan 20th, 2023 $280 Call",
+  qqq_atm_call_jan_twenty
+  )
+
+
+two_fifty_call_profit
+
+```
+
+On the other side of this trade is the call seller. Their profit is simply the inverse of the buyer.
+
+```{r}
+
+# seller payoff is inverse of buyer payoff
+call_seller_payoff <- function(underlying_price_expiration, strike_price){
+  -call_buyer_payoff(underlying_price_expiration, strike_price)
+}
+
+
+# seller profit is seller payout plus what they originally received for selling the option
+call_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (call_seller_payoff(underlying_price_expiration, strike_price) + option_price)
+}
+
+
+```
+
+Now we can model the same call as before, but from the other side of the trade.
+
+```{r}
+
+# apply our profit function
+two_fifty_call_payoff <- sapply(
+  seq(250,400, 0.01),
+  FUN = function(x){
+    call_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price,
+      option_price = qqq_atm_call_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_call_profit <- lineplot_profit(
+  two_fifty_call_payoff, 
+  "Profit, Short the Jan 20th, 2023 $280 Call",
+  qqq_atm_call_jan_twenty
+  )
+
+
+two_fifty_call_profit
+
+```
+
+Notice that unlike before where maximum loss is defined and profit is undefined, selling a call has a defined maximum profit (the premium received from selling the contract) and an undefined loss. Some throw the term "unlimited" or "infinite" around, but this is deceiving. 
+
+
+### Put Options
+
+An equity put contract gives the holder of the contract the right to force someone to buy 100 shares at a given strike price. We can calculate the payoff for a put buyer by reversing the order we used to calculate call payoff (now using strike - expiration).
+
+```{r}
+
+# put buyer payout is the opposite order (strike minus expiration) from the call buyer
+put_buyer_payoff <- function(underlying_price_expiration, strike_price){
+  
+  # either zero or the strike prize minus expiration
+  max(0, strike_price - underlying_price_expiration)
+
+}
+
+```
+
+Now let's apply the put payoff function to the same strike and expiration contract for QQQ that we used on the call.
+
+```{r}
+
+# select the at the money
+qqq_atm_put_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P",]
+
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_buyer_payoff(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our payout
+two_fifty_put_payoff <- lineplot_profit(
+  two_fifty_put_payoff, 
+  "Payoff, Long the Jan 20th, 2023 $280 Put",
+  qqq_atm_put_jan_twenty
+  )
+
+
+two_fifty_put_payoff
+
+```
+
+We also have to take into account the cost of the contract premium, similar to what we did with our call. 
+
+
+```{r}
+
+# put buyer profit equals payoff minus initial premium paid
+put_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (put_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
+}
+
+```
+
+Let's apply this to the same put contract.
+
+```{r}
+
+# first we have to create a mid price 
+qqq_atm_put_jan_twenty$mid <- qqq_atm_put_jan_twenty$ask + qqq_atm_put_jan_twenty$bid / 2
+
+# apply our profit function
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_buyer_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price,
+      option_price = qqq_atm_put_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_put_profit <- lineplot_profit(
+  two_fifty_put_payoff, 
+  "Profit, Long the Jan 20th, 2023 $280 Put",
+  qqq_atm_put_jan_twenty
+  )
+
+
+two_fifty_put_profit
+
+```
+
+We also of course have a seller where we have a buyer. We also model this similarly to the calls
+
+```{r}
+
+# seller payoff is inverse of buyer payoff
+put_seller_payoff <- function(underlying_price_expiration, strike_price){
+  -put_buyer_payoff(underlying_price_expiration, strike_price)
+}
+
+
+# seller profit is seller payout plus what they originally received for selling the option
+put_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (put_seller_payoff(underlying_price_expiration, strike_price) + option_price)
+}
+
+
+```
+
+Now let's model this on our same QQQ put.
+
+```{r}
+
+# apply our profit function
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price,
+      option_price = qqq_atm_put_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_put_profit <- lineplot_profit(
+  two_fifty_put_payoff, 
+  "Profit, Short the Jan 20th, 2023 $280 Put",
+  qqq_atm_put_jan_twenty
+  )
+
+
+two_fifty_put_profit
+
+```
+
+## Basic Point-in-Time Option Spread Strategies
+
+Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model). For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
+
+```{r}
+
+source("payout_functions.R")
+
+```
+
+### Long Vertical Spreads (Debit Spreads)
+
+Long vertical spreads are constructed by buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. Let's first look at the payoff again for a Jan 20, 2023 QQQ $280 Call.
+
+```{r}
+
+lineplot_profit(
+  long_call_profit(
+    qqq_atm_call_jan_twenty, 
+    280
+    ), 
+  "Profit, Long the QQQ Jan 20th, 2023 $280 Call",
+  qqq_atm_call_jan_twenty
+  )
+
+```
+
+Our up-front cost of buying this call is \$4,219.50. We would all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$322.19. Now let's look at what happens if we sold a call five dollars further out of the money.
+
+```{r}
+data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
+
+lineplot_profit(
+  short_call_profit(
+    data_pull,
+    285
+  ),
+  "Profit, Short the QQQ Jan 20th, 2023 Call",
+  data_pull
+)
+
+```
+
+If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades at each strike. The function I created in R does basically this: runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs.
+
+```{r}
+
+lineplot_profit(
+  call_vertical_profit(
+    data_pull,
+    280,
+    285
+  ),
+  "Profit, QQQ Jan 20th, 2023:\nLong the $280 Call, Short the $285 Call",
+  data_pull
+)
+
+```
+
+We can mirror a vertical debit spread for a put by buying a put and selling another further out-of-the-money. Again here is a long put (lets choose slightly out of the money).
+
+```{r}
+
+
+lineplot_profit(
+  long_put_profit(
+    data_pull,
+    270
+  ),
+  "Profit, Long QQQ Jan 20th, 2023 $270 Put",
+  data_pull
+)
+
+```
+
+And if we sold the \$265 (further out-of-the-money) put:
+
+```{r}
+
+
+lineplot_profit(
+  short_put_profit(
+    data_pull,
+    265
+  ),
+  "Profit, Short QQQ Jan 20th, 2023 $265 Put",
+  data_pull
+)
+
+```
+
+The function to calculate the profits from the put vertical spread is again simply the sum of the long and short payoffs.
+
+```{r}
+
+lineplot_profit(
+  put_vertical_profit(
+    data_pull,
+    270,
+    265
+  ),
+  "Profit, QQQ Jan 20th, 2023:\nLong the $270 Put, Short the $265 Put",
+  data_pull
+)
+
+
+```

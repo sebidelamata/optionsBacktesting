@@ -103,7 +103,7 @@ create_possible_profit_df <- function(option_chain_df, FUN, input_strike_price){
   # create a sequence of possible expiration prices
   possible_expiration_prices <- seq(
     0, 
-    max(option_chain_df[,"strike_price"] * 2), 
+    max(option_chain_df[,"strike_price"] * 1.2), 
     0.01
   )
   
@@ -403,7 +403,7 @@ call_diagonal_profit <- function(
 # plotting our payoff functions (plotly)
 # takes a profit df (2 columns profits and strikes)
 # and a Title for the plot
-lineplot_profit <- function(profit_df, title){
+lineplot_profit <- function(profit_df, title, option_chain_df){
   
   library(ggplot2)
   library(plotly)
@@ -445,6 +445,12 @@ lineplot_profit <- function(profit_df, title){
       linetype = "dashed",
       color = wesanderson::wes_palette("Royal1")[3]
       ) +
+    geom_vline(
+      xintercept = option_chain_df$underlying_close[1],
+      linetype = "dashed",
+      color = "white",
+      size = 0.1
+    ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
   
   profit_lineplot <- plotly::ggplotly(profit_lineplot)
