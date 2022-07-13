@@ -36,39 +36,16 @@ call_buyer_payoff <- function(underlying_price_expiration, strike_price){
 
 ```
 
-We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022. First, we need to grab the data from our PosgreSQL database.
+We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022. First, we need to grab the data from our PostgreSQL database. We went ahead and made the query process into a function as we will be repeating this a lot.
 
 ```{r}
+source("./query_sebis_pi.R")
 
-library(RPostgreSQL)
-library(getPass)
-
-# set driver name
-driver_name <- dbDriver(drvName = "PostgreSQL")
-
-# establish database connection
-db <- DBI::dbConnect(driver_name,
-                     dbname = "sebi",
-                     host = "192.168.0.12",
-                     port = 5432,
-                     user = "sebi",
-                     password = getPass("Enter Password:")
-)
 
 # our query (grab the whole option chain for that expiration)
 sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-07-01' AND underlying_ticker = 'QQQ' AND expiration_date = '2023-01-20';"
 
-# combination of our connnection stuff and our query stuff
-res <- dbSendQuery(db, sql_query_string)
-
-# fetch our data query from the database and return a dataframe
-data_pull <- dbFetch(res)
-
-# clear our query results
-dbClearResult(res)
-
-# politely disconnect from the database
-dbDisconnect(db)
+data_pull <- query_sebis_pi(sql_query_string)
 
 ```
 
@@ -428,13 +405,131 @@ two_fifty_put_profit
 
 ## Basic Point-in-Time Option Spread Strategies
 
-Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model). For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
+
+### Reducing the cost basis of equity positions
+
+A common strategy to reduce cost basis of a position is the covered call or covered put strategy. This involves either the selling of a call against a long position of 100 shares or the selling of a put against a short position of 100 shares. Lets first create a function to model buying 100 shares (using our data as an input).
+
+```{r}
+
+# let's create a profit function for holding 100 shares
+buy_hundred_shares_profit <- function(option_chain_df){
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  buy_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (closing_price * 100) - (option_chain_df$underlying_close[1] * 100) 
+    }
+    )
+  
+  # we will call it expiration so it works with the 
+  # plotting function but its really trade exit price
+  buy_hundred_shares_profit_df <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = buy_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(buy_hundred_shares_profit_df)
+  
+}
+
+```
+
+Let's grab our plotting function we made so we don't have to do all of that code again.
+
+```{r}
+
+source("./plotting_functions.R")
+
+```
+
+Now let's look at the possible profit from holding a 100 shares long of QQQ at a range of given prices.
+
+```{r}
+
+lineplot_profit(
+  buy_hundred_shares_profit(
+    data_pull
+    ),
+  paste0("Profit, Long 100 shares QQQ\nCost Basis: $", as.character(data_pull$underlying_close[1] * 100)),
+  data_pull
+)
+
+```
+
+Now let's look at the premium we would receive for selling the QQQ Jan 20th, 2023 $355 Call.
+
+```{r}
+
+# create a sequence of possible closing prices
+possible_closing_prices <- seq(
+  0, 
+  max(data_pull[,"strike_price"]), 
+  0.01
+)
+  
+# apply our vector to the profit function
+possible_profits <- sapply(
+  possible_closing_prices, 
+  FUN = function(x){
+    call_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = 355, 
+      option_price =  data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"]
+    )
+    }
+  )
+
+sample_sell_call_profit <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = possible_profits
+  )
+
+lineplot_profit(
+  sample_sell_call_profit,
+  "Profit, Short QQQ Jan 20th, 2023 $355 Call",
+  data_pull
+  )
+
+```
+
+Now let's look at what happens when we combine these two trades. Our upside is capped, but our cost basis has been reduced on trade entry. To fund the profit we simply sum the two data frames containing our prospective profit. For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
 
 ```{r}
 
 source("payout_functions.R")
 
 ```
+
+Now let's model buying 100 shares of QQQ and selling the Jan 20th, 2023 \$355 Call against the position at the same time.
+
+```{r}
+
+lineplot_profit(
+  covered_call_profit(
+    data_pull, 
+    355
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $355 Call\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"] * 100))
+  ),
+  data_pull
+)
+
+```
+
+
+Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model).
 
 ### Long Vertical Spreads (Debit Spreads)
 
