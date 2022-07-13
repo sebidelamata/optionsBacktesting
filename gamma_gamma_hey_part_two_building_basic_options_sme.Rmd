@@ -77,6 +77,8 @@ Now we can apply our function to a series of possible expiration prices.
 
 ```{r}
 
+data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
+
 # select the at the money
 qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C",]
 
@@ -138,21 +140,22 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     scale_y_continuous(
       labels = scales::dollar_format(),
       limits = c(
-        min(profit_df$possible_profits) - abs(0.2 * min(profit_df$possible_profits)),
-        max(profit_df$possible_profits) + abs(0.2 * max(profit_df$possible_profits))
+        min(profit_df$possible_profits) - abs(min(profit_df$possible_profits)),
+        max(profit_df$possible_profits) + abs(max(profit_df$possible_profits))
         )
       ) +
     scale_x_continuous(labels = scales::dollar_format()) +
     geom_hline(
       yintercept = 0,
       linetype = "dashed",
-      color = wesanderson::wes_palette("Royal1")[3]
+      color = wesanderson::wes_palette("Royal1")[3],
+      size = 0.3
       ) +
     geom_vline(
       xintercept = option_chain_df$underlying_close[1],
       linetype = "dashed",
       color = "white",
-      size = 0.1
+      size = 0.075
     ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
   
@@ -188,9 +191,6 @@ call_buyer_profit <- function(underlying_price_expiration, strike_price, option_
 Notice that this function multiplies the outcome by 100, giving us the profit of the contract, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before.
 
 ```{r}
-
-# first we have to create a mid price 
-qqq_atm_call_jan_twenty$mid <- qqq_atm_call_jan_twenty$ask + qqq_atm_call_jan_twenty$bid / 2
 
 # apply our profit function
 two_fifty_call_payoff <- sapply(
@@ -344,9 +344,6 @@ Let's apply this to the same put contract.
 
 ```{r}
 
-# first we have to create a mid price 
-qqq_atm_put_jan_twenty$mid <- qqq_atm_put_jan_twenty$ask + qqq_atm_put_jan_twenty$bid / 2
-
 # apply our profit function
 two_fifty_put_payoff <- sapply(
   seq(100,300, 0.01),
@@ -441,7 +438,7 @@ source("payout_functions.R")
 
 ### Long Vertical Spreads (Debit Spreads)
 
-Long vertical spreads are constructed by buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. Let's first look at the payoff again for a Jan 20, 2023 QQQ $280 Call.
+Long vertical spreads are constructed by simultaneously buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. Let's first look at the payoff for a bullish call vertical spread starting with just a Jan 20, 2023 QQQ $280 Call.
 
 ```{r}
 
@@ -459,7 +456,6 @@ lineplot_profit(
 Our up-front cost of buying this call is \$4,219.50. We would all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$322.19. Now let's look at what happens if we sold a call five dollars further out of the money.
 
 ```{r}
-data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
 
 lineplot_profit(
   short_call_profit(
@@ -472,7 +468,7 @@ lineplot_profit(
 
 ```
 
-If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades at each strike. The function I created in R does basically this: runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs.
+If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades at each strike. The function I created in R does basically this: runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs. The result of this spread is a bullish trade with a capped upside and reduced downside risk.
 
 ```{r}
 
@@ -488,7 +484,7 @@ lineplot_profit(
 
 ```
 
-We can mirror a vertical debit spread for a put by buying a put and selling another further out-of-the-money. Again here is a long put (lets choose slightly out of the money).
+We can mirror a vertical debit spread for a put by buying a put and selling another further out-of-the-money. This gives us a spread that trades bearish with capped potential profits and reduced entry cost. Again here is a single long put (lets choose slightly out of the money).
 
 ```{r}
 
@@ -534,5 +530,144 @@ lineplot_profit(
   data_pull
 )
 
+
+```
+
+### Short Vertical Spreads (Credit Spreads)
+
+Just like we can use a spread trade for a net long position, we can create a net short position. Let's look at the inverse of the call debit spread position we just illustrated. First we sell a call closer to the money.
+
+```{r}
+
+lineplot_profit(
+  short_call_profit(
+    qqq_atm_call_jan_twenty, 
+    280
+    ), 
+  "Profit, Short the QQQ Jan 20th, 2023 $280 Call",
+  data_pull
+  )
+
+
+```
+
+Then we buy a call further from the money (the opposite of a debit spread).
+
+```{r}
+
+lineplot_profit(
+  long_call_profit(
+    data_pull,
+    285
+  ),
+  "Profit, Long the QQQ Jan 20th, 2023 Call",
+  data_pull
+)
+
+```
+
+The result is a spread that allows us to take a short position and define the risk of the trade (otherwise undefined when selling a call). If you look at the code below, you will notice it is identical to the code for the debit spread except with the strikes reversed.
+
+```{r}
+
+lineplot_profit(
+  call_vertical_profit(
+    data_pull,
+    285,
+    280
+  ),
+  "Profit, QQQ Jan 20th, 2023:\nShort the $280 Call, Long the $285 Call",
+  data_pull
+)
+
+```
+
+We can also use a short put vertical spread to create a bullish position that receives a credit up front with reduced cost of entry compared to selling the naked put. Here is the same put spread we did before, but with the strikes reversed to make it a net short position.
+
+```{r}
+
+lineplot_profit(
+  put_vertical_profit(
+    data_pull,
+    265,
+    270
+  ),
+  "Profit, QQQ Jan 20th, 2023:\nShort the $270 Put, Long the $265 Put",
+  data_pull
+)
+
+```
+
+### Short and Long Iron Condors/Butterflies
+
+Though the name seemss exotic, Iron Condors are simply a put vertical spread combined with a call spread. This sounds counter intuitive, selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being right on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
+
+```{r}
+
+lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    340,
+    330,
+    230,
+    240
+  ),
+  "Iron Condor, QQQ Jan 20, 2023:\nShort the $330 Call, Long the $340\nShort the $240 Put, Long the $230",
+  data_pull
+)
+
+```
+
+A long condor would simply be the opposit of the previous trade. This trade would profit given a big move in either direction (or a significant increase in volatility as this position is a net debit).
+
+```{r}
+
+lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    330,
+    340,
+    240,
+    230
+  ),
+  "Iron Condor, QQQ Jan 20, 2023:\nLong the $330 Call, Short the $340\nLong the $240 Put, Short the $230",
+  data_pull
+)
+
+```
+
+An Iron Butterfly is very similar to an Iron Condor, except that both of the closer to the money contracts share the same strike (usually near-the-money). The short Iron Butterfly illustrated here creates for much higher risk-reward ratio (in this case ~15.5:1), albeit at the cost of a lot of potential risk management and related trade commissions from having to adjust the strikes.
+
+```{r}
+
+lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    290,
+    280,
+    270,
+    280
+  ),
+  "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230",
+  data_pull
+)
+
+```
+
+The long Iron Butterfly provides the opposite scenario: a low payout (~6.5%) for a very wide range of strikes with a very extreme downside scenario.
+
+```{r}
+
+lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    280,
+    290,
+    280,
+    270
+  ),
+  "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230",
+  data_pull
+)
 
 ```

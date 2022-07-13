@@ -443,13 +443,14 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     geom_hline(
       yintercept = 0,
       linetype = "dashed",
-      color = wesanderson::wes_palette("Royal1")[3]
+      color = wesanderson::wes_palette("Royal1")[3],
+      size = 0.3
       ) +
     geom_vline(
       xintercept = option_chain_df$underlying_close[1],
-      linetype = "dashed",
+      linetype = "dotted",
       color = "white",
-      size = 0.1
+      size = 0.075
     ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
   

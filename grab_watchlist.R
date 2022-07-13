@@ -26,7 +26,9 @@ grab_watchlist <- function(){
     "GLD",
     "SLV",
     "TLT",
-    "HYG"
+    "HYG",
+    "FXY",
+    "XLE"
   )
   
   # create an empty dataframe 
