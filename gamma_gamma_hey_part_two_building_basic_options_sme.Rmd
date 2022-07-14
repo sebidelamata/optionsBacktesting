@@ -528,6 +528,25 @@ lineplot_profit(
 
 ```
 
+And the covered put...
+
+```{r}
+
+lineplot_profit(
+  covered_put_profit(
+    data_pull, 
+    255,
+    0.0875
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $255 Put\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100))
+  ),
+  data_pull
+)
+
+```
+
 
 Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model).
 
