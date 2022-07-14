@@ -403,7 +403,7 @@ short_hundred_shares_profit <- function(option_chain_df, margin_interest_rate, n
   )
   
   short_hundred_shares_profit_df <- data.frame(
-    possible_closing_prices = possible_closing_prices,
+    possible_expiration_prices = possible_closing_prices,
     possible_profits = short_hundred_shares_profit
   )
   
