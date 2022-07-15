@@ -145,7 +145,7 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
 # now let's plot our payout
 two_fifty_call_payoff <- lineplot_profit(
   two_fifty_call_payoff, 
-  "Payoff, Long the Jan 20th, 2023 $280 Call",
+  paste0("Payoff, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(qqq_atm_call_jan_twenty$mid), " per share"),
   qqq_atm_call_jan_twenty
   )
 
@@ -190,7 +190,7 @@ two_fifty_call_payoff <- data.frame(
 # now let's plot our profit
 two_fifty_call_profit <- lineplot_profit(
   two_fifty_call_payoff, 
-  "Profit, Long the Jan 20th, 2023 $280 Call",
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(qqq_atm_call_jan_twenty$mid * 100)),
   qqq_atm_call_jan_twenty
   )
 
@@ -242,7 +242,7 @@ two_fifty_call_payoff <- data.frame(
 # now let's plot our profit
 two_fifty_call_profit <- lineplot_profit(
   two_fifty_call_payoff, 
-  "Profit, Short the Jan 20th, 2023 $280 Call",
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Call\nInitial premium received: $", as.character(qqq_atm_call_jan_twenty$mid * 100)),
   qqq_atm_call_jan_twenty
   )
 
@@ -296,7 +296,7 @@ two_fifty_put_payoff <- data.frame(
 # now let's plot our payout
 two_fifty_put_payoff <- lineplot_profit(
   two_fifty_put_payoff, 
-  "Payoff, Long the Jan 20th, 2023 $280 Put",
+  paste0("Payoff, Long the QQQ Jan 20th, 2023 $280 Put\nCost Basis: $", as.character(qqq_atm_put_jan_twenty$mid), " per share"),
   qqq_atm_put_jan_twenty
   )
 
@@ -342,7 +342,7 @@ two_fifty_put_payoff <- data.frame(
 # now let's plot our profit
 two_fifty_put_profit <- lineplot_profit(
   two_fifty_put_payoff, 
-  "Profit, Long the Jan 20th, 2023 $280 Put",
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Put\nCost Basis: $", as.character(qqq_atm_put_jan_twenty$mid * 100)),
   qqq_atm_put_jan_twenty
   )
 
@@ -394,7 +394,7 @@ two_fifty_put_payoff <- data.frame(
 # now let's plot our profit
 two_fifty_put_profit <- lineplot_profit(
   two_fifty_put_payoff, 
-  "Profit, Short the Jan 20th, 2023 $280 Put",
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Put\nInitial premium received: $", as.character(qqq_atm_put_jan_twenty$mid * 100)),
   qqq_atm_put_jan_twenty
   )
 
@@ -444,13 +444,6 @@ buy_hundred_shares_profit <- function(option_chain_df){
 
 ```
 
-Let's grab our plotting function we made so we don't have to do all of that code again.
-
-```{r}
-
-source("./plotting_functions.R")
-
-```
 
 Now let's look at the possible profit from holding a 100 shares long of QQQ at a range of given prices.
 
@@ -496,7 +489,7 @@ sample_sell_call_profit <- data.frame(
 
 lineplot_profit(
   sample_sell_call_profit,
-  "Profit, Short QQQ Jan 20th, 2023 $355 Call",
+  paste0("Profit, Short QQQ Jan 20th, 2023 $355 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 355, "mid"] * 100)),
   data_pull
   )
 
@@ -601,7 +594,7 @@ lineplot_profit(
     days_till_expiry
     ),
   paste0(
-  "Profit, Short 100 shares QQQ\nEntry Cost Basis: $",
+  "Profit, Short 100 shares QQQ\nCost Basis: $",
   as.character(data_pull$underlying_close[1] * 100)
   ),
   data_pull
@@ -659,16 +652,16 @@ Long vertical spreads are constructed by simultaneously buying a contract and se
 
 lineplot_profit(
   long_call_profit(
-    qqq_atm_call_jan_twenty, 
+    data_pull, 
     280
     ), 
-  "Profit, Long the QQQ Jan 20th, 2023 $280 Call",
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100)),
   qqq_atm_call_jan_twenty
   )
 
 ```
 
-Our up-front cost of buying this call is \$4,219.50. We would all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$322.19. Now let's look at what happens if we sold a call five dollars further out of the money.
+Our up-front cost of buying this call is \$2,808.50. We would all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$308.09. Now let's look at what happens if we sold a call five dollars further out of the money.
 
 ```{r}
 
@@ -677,7 +670,7 @@ lineplot_profit(
     data_pull,
     285
   ),
-  "Profit, Short the QQQ Jan 20th, 2023 Call",
+  paste0("Profit, Short the QQQ Jan 20th, 2023 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100)),
   data_pull
 )
 
@@ -693,7 +686,7 @@ lineplot_profit(
     280,
     285
   ),
-  "Profit, QQQ Jan 20th, 2023:\nLong the $280 Call, Short the $285 Call",
+  paste0("Profit, QQQ Jan 20th, 2023:\nLong the $280 Call, Short the $285 Call\nCost Basis: $",as.character((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100))),
   data_pull
 )
 
@@ -709,7 +702,7 @@ lineplot_profit(
     data_pull,
     270
   ),
-  "Profit, Long QQQ Jan 20th, 2023 $270 Put",
+  paste0("Profit, Long QQQ Jan 20th, 2023 $270 Put\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)),
   data_pull
 )
 
@@ -725,7 +718,7 @@ lineplot_profit(
     data_pull,
     265
   ),
-  "Profit, Short QQQ Jan 20th, 2023 $265 Put",
+  paste0("Profit, Short QQQ Jan 20th, 2023 $265 Put\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100)),
   data_pull
 )
 
@@ -741,7 +734,7 @@ lineplot_profit(
     270,
     265
   ),
-  "Profit, QQQ Jan 20th, 2023:\nLong the $270 Put, Short the $265 Put",
+  paste0("Profit, QQQ Jan 20th, 2023:\nLong the $270 Put, Short the $265 Put\nCost Basis: $", as.character((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100))),
   data_pull
 )
 
@@ -759,7 +752,7 @@ lineplot_profit(
     qqq_atm_call_jan_twenty, 
     280
     ), 
-  "Profit, Short the QQQ Jan 20th, 2023 $280 Call",
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100)),
   data_pull
   )
 
@@ -775,7 +768,7 @@ lineplot_profit(
     data_pull,
     285
   ),
-  "Profit, Long the QQQ Jan 20th, 2023 Call",
+  paste0("Profit, Long the QQQ Jan 20th, 2023 Call\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100)),
   data_pull
 )
 
@@ -791,7 +784,7 @@ lineplot_profit(
     285,
     280
   ),
-  "Profit, QQQ Jan 20th, 2023:\nShort the $280 Call, Long the $285 Call",
+  paste0("Profit, QQQ Jan 20th, 2023:\nShort the $280 Call, Long the $285 Call\nInitial premium received: $", as.character((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100))),
   data_pull
 )
 
@@ -807,7 +800,7 @@ lineplot_profit(
     265,
     270
   ),
-  "Profit, QQQ Jan 20th, 2023:\nShort the $270 Put, Long the $265 Put",
+  paste0("Profit, QQQ Jan 20th, 2023:\nShort the $270 Put, Long the $265 Put\nInitial premium received: $", as.character((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100))),
   data_pull
 )
 
@@ -827,7 +820,10 @@ lineplot_profit(
     230,
     240
   ),
-  "Iron Condor, QQQ Jan 20, 2023:\nShort the $330 Call, Long the $340\nShort the $240 Put, Long the $230",
+  paste0(
+    "Iron Condor, QQQ Jan 20, 2023:\nShort the $330 Call, Long the $340\nShort the $240 Put, Long the $230\nInitial premium received: $", 
+    as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 330, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 340, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 240, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 230, "mid"] * 100)))
+    ),
   data_pull
 )
 
@@ -845,7 +841,9 @@ lineplot_profit(
     240,
     230
   ),
-  "Iron Condor, QQQ Jan 20, 2023:\nLong the $330 Call, Short the $340\nLong the $240 Put, Short the $230",
+  paste0("Iron Condor, QQQ Jan 20, 2023:\nLong the $330 Call, Short the $340\nLong the $240 Put, Short the $230\nCost Basis: $",
+         as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 330, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 340, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 240, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 230, "mid"] * 100)))
+         ),
   data_pull
 )
 
@@ -863,7 +861,9 @@ lineplot_profit(
     270,
     280
   ),
-  "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230",
+  paste0("Iron Butterfly, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230\nInitial premium received: $",
+         as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 290, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)))
+         ),
   data_pull
 )
 
@@ -881,7 +881,10 @@ lineplot_profit(
     280,
     270
   ),
-  "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230",
+  paste0(
+    "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230\nCost Basis: $",
+    as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 290, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)))
+    ),
   data_pull
 )
 

@@ -18,11 +18,20 @@ call_intrinsic_value <- function(option_chain_df, strike_price){
 
 
 
+
+
+
+
+
 # now put option intrinsic value
 # Put Option Intrinsic Value=PS−USC
 put_intrinsic_value <- function(option_chain_df, strike_price){
   max(strike_price - option_chain_df$underlying_close[1], 0) * 100
 }
+
+
+
+
 
 
 
@@ -32,10 +41,20 @@ call_extrinsic_value <- function(option_chain_df, strike_price){
   (100 * option_chain_df[option_chain_df$strike_price == strike_price & option_chain_df$contract_type == "C", "mid"]) - call_intrinsic_value(option_chain_df, strike_price)
 }
 
+
+
+
+
+
 # next our put
 put_extrinsic_value <- function(option_chain_df, strike_price){
   (100 * option_chain_df[option_chain_df$strike_price == strike_price & option_chain_df$contract_type == "P", "mid"]) - put_intrinsic_value(option_chain_df, strike_price)
 }
+
+
+
+
+
 
 
 # The payoff for a call buyer at expiration date T is given by 
@@ -48,10 +67,18 @@ call_buyer_payoff <- function(underlying_price_expiration, strike_price){
 }
 
 
+
+
+
+
 # profit is equal to payoff minus the initial premium
 call_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
   100 * (call_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
 }
+
+
+
+
 
 
 # seller payoff is inverse of buyer payoff
@@ -60,10 +87,20 @@ call_seller_payoff <- function(underlying_price_expiration, strike_price){
 }
 
 
+
+
+
+
+
 # seller profit is seller payout plus what they originally received for selling the option
 call_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
   100 * (call_seller_payoff(underlying_price_expiration, strike_price) + option_price)
 }
+
+
+
+
+
 
 
 # put buyer payout is the opposite order (strike minus expiration) from the call buyer
@@ -75,10 +112,17 @@ put_buyer_payoff <- function(underlying_price_expiration, strike_price){
 }
 
 
+
+
+
 # put buyer profit equals payoff minus initial premium paid
 put_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
   100 * (put_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
 }
+
+
+
+
 
 
 # put seller payoff is inverse of buyer
@@ -87,10 +131,17 @@ put_seller_payoff <- function(underlying_price_expiration, strike_price){
 }
 
 
+
+
+
+
 # put seller profit is put seller payout plus initial premium received
 put_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
   100 * (put_seller_payoff(underlying_price_expiration, strike_price) + option_price)
 }
+
+
+
 
 
 
@@ -125,6 +176,12 @@ create_possible_profit_df <- function(option_chain_df, FUN, input_strike_price){
 }
 
 
+
+
+
+
+
+
 # now we can model the long call
 long_call_profit <- function(option_chain_df, long_call_strike_price){
   
@@ -142,6 +199,12 @@ long_call_profit <- function(option_chain_df, long_call_strike_price){
   return(long_call_possible_profit_df)
   
 }
+
+
+
+
+
+
 
 
 
@@ -165,6 +228,10 @@ short_call_profit <- function(option_chain_df, short_call_strike_price){
 
 
 
+
+
+
+
 # now we can model the long put
 long_put_profit <- function(option_chain_df, long_put_strike_price){
   
@@ -185,6 +252,11 @@ long_put_profit <- function(option_chain_df, long_put_strike_price){
 
 
 
+
+
+
+
+
 # now we can model the long put
 short_put_profit <- function(option_chain_df, short_put_strike_price){
   
@@ -202,6 +274,10 @@ short_put_profit <- function(option_chain_df, short_put_strike_price){
   return(short_put_possible_profit_df)
   
 }
+
+
+
+
 
 
 
@@ -239,6 +315,10 @@ call_vertical_profit <- function(
 
 
 
+
+
+
+
 # now we can model a put vertical
 put_vertical_profit <- function(
     option_chain_df, 
@@ -268,6 +348,12 @@ put_vertical_profit <- function(
   return(put_vertical_profit_df)
   
 }
+
+
+
+
+
+
 
 
 # map profits for an iron condor strategy (CAW!)
@@ -303,6 +389,8 @@ iron_condor_profit <- function(
 
 
 
+
+
 # let's create a profit function for holding 100 shares
 buy_hundred_shares_profit <- function(option_chain_df){
   
@@ -330,6 +418,8 @@ buy_hundred_shares_profit <- function(option_chain_df){
   return(buy_hundred_shares_profit_df)
   
 }
+
+
 
 
 
@@ -363,6 +453,9 @@ covered_call_profit <- function(option_chain_df, short_call_strike_price){
 
 
 
+
+
+
 # calculate margin interest
 calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rate, number_borrow_days){
   
@@ -372,6 +465,10 @@ calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rat
   return(margin_interest_accrued)
  
 }
+
+
+
+
 
 
 # let's create a profit function for shorting 100 shares
@@ -412,7 +509,12 @@ short_hundred_shares_profit <- function(option_chain_df, margin_interest_rate, n
   
 }
 
-# let's create a covered call
+
+
+
+
+
+# let's create a covered put
 covered_put_profit <- function(option_chain_df, short_put_strike_price, margin_interest_rate){
   
   # short call profit df
