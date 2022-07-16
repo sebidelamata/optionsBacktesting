@@ -12,14 +12,15 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     data = profit_df,
     aes(
       x = possible_expiration_prices,
-      y = possible_profits #,
-      # text = paste(
-      #   option_chain_df$underlying_ticker,
-      #   " Price: ",
-      #   paste0("$", formatC(as.numeric(possible_expiration_prices), format="f", digits=2, big.mark=",")),
-      #   "<br>Profit: ",
-      #   paste0("$", formatC(as.numeric(possible_profits), format="f", digits=2, big.mark=","))
-      # )
+      y = possible_profits,
+      group = 1,
+      text = paste(
+        option_chain_df$underlying_ticker,
+        " Price: ",
+        paste0("$", formatC(as.numeric(possible_expiration_prices), format="f", digits=2, big.mark=",")),
+        "<br>Profit: ",
+        paste0("$", formatC(as.numeric(possible_profits), format="f", digits=2, big.mark=","))
+      )
     )
   ) +
     geom_line(color = wesanderson::wes_palette("Royal1")[3]) +
@@ -59,7 +60,7 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     ) +
     scale_color_manual(values = c(wesanderson::wes_palette("Royal1")[3]))
   
-  profit_lineplot <- plotly::ggplotly(profit_lineplot)
+  profit_lineplot <- plotly::ggplotly(profit_lineplot, tooltip = c("text"))
   
 
   

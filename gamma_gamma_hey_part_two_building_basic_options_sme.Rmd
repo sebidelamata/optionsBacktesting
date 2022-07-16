@@ -16,11 +16,11 @@ In this post we will use data collected from [post one](https://sebidelamata.git
 
 ## Single Option Valuation
 
-Equity options generally serve as a contract giving the owner the right to sell (a put) or buy (a call) 100 shares of the underlying at a given price. We will start of modeling these as European style options to start for the sake of simplicity. European options can be exercised at the date of expiration, where American style options allow for early exercise up to and including the date of expiration.
+Equity options generally serve as a contract giving the owner the right to sell (a put) or buy (a call) 100 shares of the underlying at a given price. We will start of modeling these as European style options to start for the sake of simplicity. European options can only be exercised at the date of expiration, whereas American style options allow for early exercise up to and including the date of expiration.
 
 ### Call Options
 
-As stated before, equity call options give the owner the right buy 100 shares of the underlying at a given price. The value of this contract has a convex payoff structure compared to the underlying. The contract will be worth nothing if it expires before the underlying price has surpassed the strike price of the contract. It will otherwise be worth the difference between the market price of the underlying and the strike price of the contract. This basic payoff function can be modeled like so:
+As stated before, equity call options give the owner the right buy 100 shares of the underlying at a given price. The contract will be worth nothing if it expires before the underlying price has surpassed the strike price of the contract. It will otherwise be worth the difference between the market price of the underlying and the strike price of the contract. This basic payoff function can be modeled like so:
 
 ```{r}
 
@@ -50,16 +50,26 @@ data_pull <- query_sebis_pi(sql_query_string)
 
 ```
 
-Now we can apply our function across a vector of possible expiration prices from \$250 to \$400 by penny increments to model possible profits. We will assume that the trader will be able to execute at the mid price. We then create a data frame to hold each vector: the possible prices at expiration and their corresponding possible profits.
-
+We will assume that the trader will be able to execute at the mid price. To do this we create a "mid" column by averaging the bid and the ask prices for each strike. 
 
 ```{r}
 
 data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
 
-# select the at the money
+```
+
+
+Now we can apply our function across a vector of possible underlying expiration prices from \$250 to \$400 by penny increments to model possible profits. We then create a data frame to hold each vector: the possible prices at expiration and their corresponding possible profits.
+
+
+```{r}
+
+# select a near the money call
 qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C",]
 
+
+# apply our payoff function to a vector of possible underlying 
+# expiration prices from $250-$400 by penny increments
 two_fifty_call_payoff <- sapply(
   seq(250,400, 0.01),
   FUN = function(x){
@@ -70,7 +80,7 @@ two_fifty_call_payoff <- sapply(
     }
 )
 
-# create a df to hold values with possible strikes at expiration
+# create a df to hold values with possible underlying strikes at expiration
 two_fifty_call_payoff <- data.frame(
   possible_profits = two_fifty_call_payoff,
   possible_expiration_prices = seq(250, 400, 0.01)
@@ -97,7 +107,15 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     data = profit_df,
     aes(
       x = possible_expiration_prices,
-      y = possible_profits
+      y = possible_profits,
+      group = 1,
+      text = paste(
+        option_chain_df$underlying_ticker,
+        " Price: ",
+        paste0("$", formatC(as.numeric(possible_expiration_prices), format="f", digits=2, big.mark=",")),
+        "<br>Profit: ",
+        paste0("$", formatC(as.numeric(possible_profits), format="f", digits=2, big.mark=","))
+      )
     )
   ) +
     geom_line(color = wesanderson::wes_palette("Royal1")[3]) +
@@ -137,7 +155,7 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     ) +
     scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
   
-  profit_lineplot <- plotly::ggplotly(profit_lineplot)
+  profit_lineplot <- plotly::ggplotly(profit_lineplot, tooltip = c("text"))
                       
   return(profit_lineplot)
   
@@ -166,7 +184,7 @@ call_buyer_profit <- function(underlying_price_expiration, strike_price, option_
 
 ```
 
-Notice that this function multiplies the outcome by 100, giving us the profit of the contract, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before. We will achieve 100% returns if the underlying price passes \$336.17.
+Notice that this function multiplies the outcome by 100, giving us the profit at the per contract level, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before. We will achieve 100% returns if the underlying price passes \$336.17.
 
 ```{r}
 
@@ -406,10 +424,7 @@ two_fifty_put_profit
 
 ## Basic Point-in-Time Option Spread Strategies
 
-
-# Single point-in-time spreads
-
-Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model).
+Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes-Merton model) that allow us to profit from time and volatility rather than just direction of the underlying.
 
 ### Long Vertical Spreads (Debit Spreads)
 
@@ -420,7 +435,7 @@ Long vertical spreads are constructed by simultaneously buying a contract and se
 source("payout_functions.R")
 ```
 
-Let's first look at the payoff for a bullish call vertical spread starting with just a Jan 20, 2023 QQQ $280 Call.
+Let's first look at the payoff for a bullish call vertical spread by starting with just a Jan 20, 2023 QQQ $280 Call (the long leg of the trade).
 
 ```{r}
 
@@ -435,7 +450,7 @@ lineplot_profit(
 
 ```
 
-Our up-front cost of buying this call is \$2,808.50. We would all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$308.09. Now let's look at what happens if we sold a call five dollars further out of the money.
+Our up-front cost of buying this call is \$2,808.50. We would forfeit all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$308.09. Now let's look at what happens if we sold a call five dollars further out of the money.
 
 ```{r}
 
@@ -450,7 +465,7 @@ lineplot_profit(
 
 ```
 
-If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades at each strike. The function I created in R does basically this: runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs. The result of this spread is a bullish trade with a capped upside and reduced downside risk.
+If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades' profit across each strike. The function I created in R does basically this; it runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs into a new column. The result of this spread is a bullish trade with a capped upside and reduced downside risk.
 
 ```{r}
 
@@ -517,7 +532,7 @@ lineplot_profit(
 
 ### Short Vertical Spreads (Credit Spreads)
 
-Just like we can use a spread trade for a net long position, we can create a net short position. Let's look at the inverse of the call debit spread position we just illustrated. First we sell a call closer to the money.
+Just like we can use a spread trade for a net long position, we can create a net short position. Net short positions will result in us receiving a premium up front instead of having to buy into a position. Let's look at the inverse of the call debit spread position we just illustrated. First we sell a call closer to the money.
 
 ```{r}
 
@@ -582,7 +597,7 @@ lineplot_profit(
 
 ### Short and Long Iron Condors/Butterflies
 
-Though the name seemss exotic, Iron Condors are simply a put vertical spread combined with a call spread. This sounds counter intuitive, selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being right on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
+Though the name seemss exotic, Iron Condors are simply a put vertical spread combined with a call spread. This sounds counter intuitive, but selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being "right" on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
 
 ```{r}
 
@@ -603,7 +618,7 @@ lineplot_profit(
 
 ```
 
-A long condor would simply be the opposit of the previous trade. This trade would profit given a big move in either direction (or a significant increase in volatility as this position is a net debit).
+A long condor would be the opposite of the previous trade. This trade would profit given a big move in either direction (or a significant increase in volatility as this position is a net debit).
 
 ```{r}
 
@@ -773,7 +788,7 @@ lineplot_profit(
 
 ```
 
-Selling a covered put is similar to selling a covered call, but instead can help us reduce the cost basis of holding a short position. The main difference in holding a short position is the margin interest incurred. In both the case of the covered call and the covered put, we are assuming entering the position un-levered at this point (assuming only 100% borrow for the short position or paying for the long position outright). In order to model this short position, we must calculate the carrying cost of the 100 shares for the period of the contract sold against it. Let's first model our interest. The interest accrued is simply the amount borrowed multiplied by the margin interest rate as a decimal, then divided by 360 to give us a daily carry cost. This is then multiplied by the number of days the amount is borrowed (daily rate times number of days).
+Selling a covered put is similar to selling a covered call, but instead can help us reduce the cost basis of holding a short position. The main difference in holding a short position is the margin interest incurred. In both the case of the covered call and the covered put, we are assuming entering the position un-levered at this point (assuming 100% cash funcing of borrow for the short position or paying for the long position outright). In order to model this short position, we must calculate the carrying cost of the 100 shares for the period of the contract sold against it. Let's first model our interest. The interest accrued is simply the amount borrowed multiplied by the margin interest rate as a decimal, then divided by 360 to give us a daily carry cost. This is then multiplied by the number of days the amount is borrowed (daily rate times number of days).
 
 ```{r}
 
@@ -789,7 +804,7 @@ calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rat
 
 ```
 
-Now that we can calculate our carry costs, the function to find potential profits of the short position is similar to the long position with a two notable exceptions. In the long position we subtract our entry price from our exit price. Selling shares short reverses this order so that we must subtract our exit price (what we paid to buy back) from our entry price (what it was sold at initially). We must also subtract the cost of carry we have calculated in order to gauge our short profit. This model does not account for any dividends that must be paid from being short.
+Now that we can calculate our carry costs, the function to find potential profits of the short position is similar to the long position with two notable exceptions. In the long position we subtract our entry price from our exit price. Selling shares short reverses this order so that we must subtract our exit price (what we paid to buy back) from our entry price (what it was sold at initially). We must also subtract the cost of carry we have calculated in order to gauge our short profit. This model does not account for any dividends that must be paid from being short.
 
 ```{r}
 
@@ -913,7 +928,7 @@ lineplot_profit(
 
 ```
 
-We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium plus \$43 dollars and limiting our maximum possible profit to \$863.96.
+We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium (plus a \$43 dollar credit we get to pocket) and limiting our maximum possible profit to \$863.96.
 
 ```{r}
 
@@ -925,7 +940,7 @@ lineplot_profit(
     305
     ),
   paste0(
-  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection Cost Basis: $",
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection premium received: $",
   as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
   ),
   data_pull
@@ -960,7 +975,7 @@ lineplot_profit(
     280
     ),
   paste0(
-  "Profit, Short the QQQ Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nInitial premium received: $",
+  "Profit, Short the QQQ Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCost Basis: $",
   as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
   ),
   data_pull
@@ -968,7 +983,7 @@ lineplot_profit(
 
 ```
 
-Using some basic principals we can rearrange our previous equation:
+Using some basic algebraic principals we can rearrange our previous equation:
 $$
 C - P = F
 $$
@@ -976,7 +991,7 @@ so that:
 $$
 -C + P = -F
 $$
-To put this into an actionable trade, being short the call and long the put is equivalent to selling a futures contract. Let's model a synthetic short forward position in QQQ with a Jan 20th, 2023 expiry.
+To put this into an actionable trade, being short the call and long the put is equivalent to selling a futures contract. Let's model a synthetic short forward position in QQQ with a Jan 20th, 2023 expiry that pockets us an initial premium of \$479.
 
 ```{r}
 
@@ -995,3 +1010,5 @@ lineplot_profit(
 ```
 
 
+
+An array of different profit structures can be created by going long and short calls and puts at different strikes. However, all of the strategies we have examined so far have contracts containing the same expiration and have only been valued at expiration. In order to look at values before expiration or strategies spread across different expirations we will need to get the Greeks involved. In the next post, we will examine the Black-Scholes-Merton model and look at how it's variables can help us solve this problem.  
