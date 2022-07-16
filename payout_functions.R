@@ -552,6 +552,91 @@ covered_put_profit <- function(option_chain_df, short_put_strike_price, margin_i
 
 
 
+# let's create a long equity collar
+long_collar_profit <- function(option_chain_df, short_call_strike_price, long_put_strike_price){
+  
+  # short call profit df
+  short_call <- short_call_profit(
+    option_chain_df,
+    short_call_strike_price
+  )
+  
+  # 100 shares profit df
+  long_hundred_shares <- buy_hundred_shares_profit(
+    option_chain_df
+  )
+  
+  # long a protective put
+  long_put <- long_put_profit(
+    option_chain_df,
+    long_put_strike_price
+  )
+  
+  profit_df_length <- min(
+    nrow(short_call),
+    nrow(long_hundred_shares),
+    nrow(long_put)
+  )
+  
+  long_collar_profit_df <- data.frame(
+    possible_expiration_prices = short_call$possible_expiration_prices,
+    possible_profits = short_call$possible_profits + long_hundred_shares$possible_profits + long_put$possible_profits
+  )
+  
+  long_collar_profit_df <- long_collar_profit_df[1:profit_df_length,]
+  
+}
+
+
+
+
+
+# let's create a covered put
+short_collar_profit <- function(option_chain_df, short_put_strike_price, margin_interest_rate, long_call_strike_price){
+  
+  # short call profit df
+  short_put <- short_put_profit(
+    option_chain_df,
+    short_put_strike_price
+  )
+  
+  # calculate number trade days
+  number_trade_days <- as.numeric(option_chain_df$expiration_date[1] - option_chain_df$scrape_date[1])
+  
+  # 100 shares profit df
+  short_hundred_shares <- short_hundred_shares_profit(
+    option_chain_df,
+    margin_interest_rate,
+    number_trade_days
+  )
+  
+  # long call
+  long_call <- long_call_profit(
+    option_chain_df,
+    long_call_strike_price
+  )
+  
+  profit_df_length <- min(
+    nrow(short_put),
+    nrow(short_hundred_shares),
+    nrow(long_call)
+  )
+  
+  covered_put_profit_df <- data.frame(
+    possible_expiration_prices = short_put$possible_expiration_prices,
+    possible_profits = short_put$possible_profits + short_hundred_shares$possible_profits + long_call$possible_profits
+  )
+  
+  covered_put_profit_df <- covered_put_profit_df[1:profit_df_length,]
+  
+}
+
+
+
+
+
+
+
 # now we can model a bullish call diagonal
 call_diagonal_profit <- function(
     long_call_option_chain_df, 

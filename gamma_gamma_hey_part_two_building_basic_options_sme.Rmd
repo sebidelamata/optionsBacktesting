@@ -2,6 +2,7 @@
 output: html_document
 title: 'Gamma Gamma Hey (an options analysis) Part Two:'
 layout: post
+date: "`r Sys.Date()`"
 ---
 
 # Building Basic Options SME
@@ -36,7 +37,7 @@ call_buyer_payoff <- function(underlying_price_expiration, strike_price){
 
 ```
 
-We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday, July 1st 2022. First, we need to grab the data from our PostgreSQL database. We went ahead and made the query process into a function as we will be repeating this a lot.
+We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday July 1st, 2022. First, we need to grab the data from our PostgreSQL database. We went ahead and made the query process into a function as we will be repeating this a lot in the future.
 
 ```{r}
 source("./query_sebis_pi.R")
@@ -49,7 +50,7 @@ data_pull <- query_sebis_pi(sql_query_string)
 
 ```
 
-Now we can apply our function to a series of possible expiration prices.
+Now we can apply our function across a vector of possible expiration prices from \$250 to \$400 by penny increments to model possible profits. We will assume that the trader will be able to execute at the mid price. We then create a data frame to hold each vector: the possible prices at expiration and their corresponding possible profits.
 
 
 ```{r}
@@ -77,7 +78,7 @@ two_fifty_call_payoff <- data.frame(
 
 ```
 
-Let's plot our potential payoffs.
+Let's plot our potential payoffs across the possible underlying expiration prices. First we define the plotting function, then we apply it to the data frame of possible expiration prices and profits that we created earlier.
 
 ```{r}
 
@@ -165,7 +166,7 @@ call_buyer_profit <- function(underlying_price_expiration, strike_price, option_
 
 ```
 
-Notice that this function multiplies the outcome by 100, giving us the profit of the contract, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before.
+Notice that this function multiplies the outcome by 100, giving us the profit of the contract, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before. We will achieve 100% returns if the underlying price passes \$336.17.
 
 ```{r}
 
@@ -199,7 +200,7 @@ two_fifty_call_profit
 
 ```
 
-On the other side of this trade is the call seller. Their profit is simply the inverse of the buyer.
+On the other side of this trade is the call seller. Their profit is simply the opposite of the buyer's, and this trade would be bearish as opposed to the bullish call buyer. To calculate the seller profits we can simply negate the results of performing the buyer payoff function.
 
 ```{r}
 
@@ -217,7 +218,7 @@ call_seller_profit <- function(underlying_price_expiration, strike_price, option
 
 ```
 
-Now we can model the same call as before, but from the other side of the trade.
+Now we can model the same call as before, but from the other side of the trade. Instead of paying \$2808.50 for the contract we receive that as a premium up front. The trade would not start losing money until QQQ rose above $308.08 per share.
 
 ```{r}
 
@@ -251,7 +252,7 @@ two_fifty_call_profit
 
 ```
 
-Notice that unlike before where maximum loss is defined and profit is undefined, selling a call has a defined maximum profit (the premium received from selling the contract) and an undefined loss. Some throw the term "unlimited" or "infinite" around, but this is deceiving. 
+Notice that unlike before where maximum loss is defined and profit is undefined, selling a call has a defined maximum profit (the premium received from selling the contract) and an undefined loss. Some throw the term "unlimited" or "infinite" around, but this is deceiving as the probability of the underlying swinging further in either direction has a negative relationship to the size of the move. 
 
 
 ### Put Options
@@ -305,7 +306,7 @@ two_fifty_put_payoff
 
 ```
 
-We also have to take into account the cost of the contract premium, similar to what we did with our call. 
+We also have to take into account the cost of the contract premium, similar to what we did with our earlier long call. 
 
 
 ```{r}
@@ -317,7 +318,7 @@ put_buyer_profit <- function(underlying_price_expiration, strike_price, option_p
 
 ```
 
-Let's apply this to the same put contract.
+Let's apply this to the same put contract. Unlike being long a call, being long a put has a capped potential profits as the underlying can not go lower than zero in the case of equities.
 
 ```{r}
 
@@ -351,7 +352,7 @@ two_fifty_put_profit
 
 ```
 
-We also of course have a seller where we have a buyer. We also model this similarly to the calls
+We also of course have a seller where we have a buyer. We also model this similarly to the calls. Just like selling a call before, we receive a premium up front. Being short a put is a bullish position.
 
 ```{r}
 
@@ -369,7 +370,7 @@ put_seller_profit <- function(underlying_price_expiration, strike_price, option_
 
 ```
 
-Now let's model this on our same QQQ put.
+Now let's model this on our same QQQ \$280 put.
 
 ```{r}
 
@@ -621,7 +622,7 @@ lineplot_profit(
 
 ```
 
-The covered call is the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
+The covered put profits are the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
 
 ```{r}
 
@@ -639,6 +640,48 @@ lineplot_profit(
 )
 
 ```
+
+### Reducing the volatility of equity positions
+
+Instead of using the premium received from selling a call against a long equity position to reduce the cost basis of that position, we can use it to finance a put to protect the position from downside risk. This offers a way to maintain a position at reduced volatility on either side for what ideally is a zero-cost position. Let's model a long collar on 100 shares of QQQ. Now the most we can gain in this position is \$2,224.00 and the most we can lose is \$2,256.00. The cost of putting this collar on around our position is \$43.
+
+```{r}
+
+lineplot_profit(
+  long_collar_profit(
+    data_pull, 
+    305, 
+    260
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $305 Call\nLong the Jan 20th 2022 $260 Put\nCollar Protection Cost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
+We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium plus \$43 dollars and limiting our maximum possible profit to \$863.96.
+
+```{r}
+
+lineplot_profit(
+  short_collar_profit(
+    data_pull, 
+    260, 
+    0.0875,
+    305
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection Cost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
 
 # Single point-in-time spreads
 
