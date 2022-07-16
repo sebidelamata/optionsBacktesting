@@ -443,11 +443,11 @@ covered_call_profit <- function(option_chain_df, short_call_strike_price){
   )
   
   covered_call_profit_df <- data.frame(
-    possible_expiration_prices = short_call$possible_expiration_prices,
-    possible_profits = short_call$possible_profits + long_hundred_shares$possible_profits
+    possible_expiration_prices = short_call$possible_expiration_prices[1:profit_df_length],
+    possible_profits = short_call$possible_profits[1:profit_df_length] + long_hundred_shares$possible_profits[1:profit_df_length]
   )
   
-  covered_call_profit_df <- covered_call_profit_df[1:profit_df_length,]
+  return(covered_call_profit_df)
   
 }
 
@@ -539,11 +539,11 @@ covered_put_profit <- function(option_chain_df, short_put_strike_price, margin_i
   )
   
   covered_put_profit_df <- data.frame(
-    possible_expiration_prices = short_put$possible_expiration_prices,
-    possible_profits = short_put$possible_profits + short_hundred_shares$possible_profits
+    possible_expiration_prices = short_put$possible_expiration_prices[1:profit_df_length],
+    possible_profits = short_put$possible_profits[1:profit_df_length] + short_hundred_shares$possible_profits[1:profit_df_length]
   )
   
-  covered_put_profit_df <- covered_put_profit_df[1:profit_df_length,]
+  return(covered_put_profit_df)
   
 }
 
@@ -579,11 +579,11 @@ long_collar_profit <- function(option_chain_df, short_call_strike_price, long_pu
   )
   
   long_collar_profit_df <- data.frame(
-    possible_expiration_prices = short_call$possible_expiration_prices,
-    possible_profits = short_call$possible_profits + long_hundred_shares$possible_profits + long_put$possible_profits
+    possible_expiration_prices = short_call$possible_expiration_prices[1:profit_df_length],
+    possible_profits = short_call$possible_profits[1:profit_df_length] + long_hundred_shares$possible_profits[1:profit_df_length] + long_put$possible_profits[1:profit_df_length]
   )
   
-  long_collar_profit_df <- long_collar_profit_df[1:profit_df_length,]
+  return(long_collar_profit_df)
   
 }
 
@@ -622,12 +622,70 @@ short_collar_profit <- function(option_chain_df, short_put_strike_price, margin_
     nrow(long_call)
   )
   
-  covered_put_profit_df <- data.frame(
-    possible_expiration_prices = short_put$possible_expiration_prices,
-    possible_profits = short_put$possible_profits + short_hundred_shares$possible_profits + long_call$possible_profits
+  short_collar_profit_df <- data.frame(
+    possible_expiration_prices = short_put$possible_expiration_prices[1:profit_df_length],
+    possible_profits = short_put$possible_profits[1:profit_df_length] + short_hundred_shares$possible_profits[1:profit_df_length] + long_call$possible_profits[1:profit_df_length]
   )
   
-  covered_put_profit_df <- covered_put_profit_df[1:profit_df_length,]
+  return(short_collar_profit_df)
+  
+}
+
+
+
+
+
+
+
+# let's create a covered put
+long_synthetic_forward <- function(option_chain_df, strike_price){
+  
+  # short call profit df
+  short_put <- short_put_profit(
+    option_chain_df,
+    strike_price
+  )
+  
+  # long call
+  long_call <- long_call_profit(
+    option_chain_df,
+    strike_price
+  )
+  
+  long_synthetic_forward_df <- data.frame(
+    possible_expiration_prices = short_put$possible_expiration_prices,
+    possible_profits = short_put$possible_profits + long_call$possible_profits
+  )
+  
+  return(long_synthetic_forward_df)
+  
+}
+
+
+
+
+
+# let's create a covered put
+short_synthetic_forward <- function(option_chain_df, strike_price){
+  
+  # long put profit df
+  long_put <- long_put_profit(
+    option_chain_df,
+    strike_price
+  )
+  
+  # short call
+  short_call <- short_call_profit(
+    option_chain_df,
+    strike_price
+  )
+  
+  short_synthetic_forward_df <- data.frame(
+    possible_expiration_prices = long_put$possible_expiration_prices,
+    possible_profits = long_put$possible_profits + short_call$possible_profits
+  )
+  
+  return(short_synthetic_forward_df)
   
 }
 

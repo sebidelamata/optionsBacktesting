@@ -257,7 +257,7 @@ Notice that unlike before where maximum loss is defined and profit is undefined,
 
 ### Put Options
 
-An equity put contract gives the holder of the contract the right to force someone to buy 100 shares at a given strike price. We can calculate the payoff for a put buyer by reversing the order we used to calculate call payoff (now using strike - expiration).
+An equity put contract gives the holder of the contract the right to force the counterparty to buy 100 shares at a given strike price. We can calculate the payoff for a put buyer by reversing the order we used to calculate call payoff (now using strike - expiration).
 
 ```{r}
 
@@ -407,289 +407,20 @@ two_fifty_put_profit
 ## Basic Point-in-Time Option Spread Strategies
 
 
-### Reducing the cost basis of equity positions
-
-A common strategy to reduce cost basis of a position is the covered call or covered put strategy. This involves either the selling of a call against a long position of 100 shares or the selling of a put against a short position of 100 shares. Lets first create a function to model buying 100 shares (using our data as an input).
-
-```{r}
-
-# let's create a profit function for holding 100 shares
-buy_hundred_shares_profit <- function(option_chain_df){
-  
-  # create a sequence of possible closing prices
-  possible_closing_prices <- seq(
-    0, 
-    max(option_chain_df[,"strike_price"]), 
-    0.01
-  )
-  
-  # apply our vector to the profit function
-  buy_hundred_shares_profit <- sapply(
-    possible_closing_prices, 
-    function(closing_price){
-      (closing_price * 100) - (option_chain_df$underlying_close[1] * 100) 
-    }
-    )
-  
-  # we will call it expiration so it works with the 
-  # plotting function but its really trade exit price
-  buy_hundred_shares_profit_df <- data.frame(
-    possible_expiration_prices = possible_closing_prices,
-    possible_profits = buy_hundred_shares_profit
-  )
-  
-  # return our dataframe
-  return(buy_hundred_shares_profit_df)
-  
-}
-
-```
-
-
-Now let's look at the possible profit from holding a 100 shares long of QQQ at a range of given prices.
-
-```{r}
-
-lineplot_profit(
-  buy_hundred_shares_profit(
-    data_pull
-    ),
-  paste0("Profit, Long 100 shares QQQ\nCost Basis: $", as.character(data_pull$underlying_close[1] * 100)),
-  data_pull
-)
-
-```
-
-Now let's look at the premium we would receive for selling the QQQ Jan 20th, 2023 $355 Call.
-
-```{r}
-
-# create a sequence of possible closing prices
-possible_closing_prices <- seq(
-  0, 
-  max(data_pull[,"strike_price"]), 
-  0.01
-)
-  
-# apply our vector to the profit function
-possible_profits <- sapply(
-  possible_closing_prices, 
-  FUN = function(x){
-    call_seller_profit(
-      underlying_price_expiration = x, 
-      strike_price = 355, 
-      option_price =  data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"]
-    )
-    }
-  )
-
-sample_sell_call_profit <- data.frame(
-    possible_expiration_prices = possible_closing_prices,
-    possible_profits = possible_profits
-  )
-
-lineplot_profit(
-  sample_sell_call_profit,
-  paste0("Profit, Short QQQ Jan 20th, 2023 $355 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 355, "mid"] * 100)),
-  data_pull
-  )
-
-```
-
-Now let's look at what happens when we combine these two trades. Our upside is capped, but our cost basis has been reduced on trade entry. To fund the profit we simply sum the two data frames containing our prospective profit. For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
-
-```{r}
-
-source("payout_functions.R")
-
-```
-
-Now let's model buying 100 shares of QQQ and selling the Jan 20th, 2023 \$355 Call against the position at the same time.
-
-```{r}
-
-lineplot_profit(
-  covered_call_profit(
-    data_pull, 
-    355
-    ),
-  paste0(
-  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $355 Call\nCost Basis: $",
-  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"] * 100))
-  ),
-  data_pull
-)
-
-```
-
-Selling a covered put is similar to selling a covered call, but instead can help us reduce the cost basis of holding a short position. The main difference in holding a short position is the margin interest incurred. In both the case of the covered call and the covered put, we are assuming entering the position un-levered at this point (assuming only 100% borrow for the short position or paying for the long position outright). In order to model this short position, we must calculate the carrying cost of the 100 shares for the period of the contract sold against it. Let's first model our interest. The interest accrued is simply the amount borrowed multiplied by the margin interest rate as a decimal, then divided by 360 to give us a daily carry cost. This is then multiplied by the number of days the amount is borrowed (daily rate times number of days).
-
-```{r}
-
-# calculate margin interest
-calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rate, number_borrow_days){
-  
-  # daily margin interest accrued
-  margin_interest_accrued <- ((borrow_amount * margin_interest_rate) / 360) * number_borrow_days
-  
-  return(margin_interest_accrued)
- 
-}
-
-```
-
-Now that we can calculate our carry costs, the function to find potential profits of the short position is similar to the long position with a two notable exceptions. In the long position we subtract our entry price from our exit price. Selling shares short reverses this order so that we must subtract our exit price (what we paid to buy back) from our entry price (what it was sold at initially). We must also subtract the cost of carry we have calculated in order to gauge our short profit. This model does not account for any dividends that must be paid from being short.
-
-```{r}
-
-# let's create a profit function for shorting 100 shares
-short_hundred_shares_profit <- function(option_chain_df, margin_interest_rate, number_borrow_days){
-  
-  # initial sale
-  borrow_amount <- option_chain_df$underlying_close[1] * 100
-  
-  # interest accrued
-  interest_accrued <- calculate_margin_interest_accrued(
-    borrow_amount = borrow_amount, 
-    margin_interest_rate = margin_interest_rate, 
-    number_borrow_days = number_borrow_days
-    )
-  
-  # create a sequence of possible closing prices
-  possible_closing_prices <- seq(
-    0, 
-    max(option_chain_df[,"strike_price"]), 
-    0.01
-  )
-  
-  # apply our vector to the profit function
-  short_hundred_shares_profit <- sapply(
-    possible_closing_prices, 
-    function(closing_price){
-      (option_chain_df$underlying_close[1] * 100) - (closing_price * 100) - interest_accrued
-    }
-  )
-  
-  short_hundred_shares_profit_df <- data.frame(
-    possible_expiration_prices = possible_closing_prices,
-    possible_profits = short_hundred_shares_profit
-  )
-  
-  # return our dataframe
-  return(short_hundred_shares_profit_df)
-  
-}
-
-```
-
-Let's model the possible profits from selling short 100 shares of QQQ until Jan 20th, 2023 at an annualized margin interest rate of 8.75%.
-
-```{r}
-
-days_till_expiry <- as.numeric(data_pull$expiration_date[1] - data_pull$scrape_date[1])
-
-lineplot_profit(
-  short_hundred_shares_profit(
-    data_pull,
-    0.0875, 
-    days_till_expiry
-    ),
-  paste0(
-  "Profit, Short 100 shares QQQ\nCost Basis: $",
-  as.character(data_pull$underlying_close[1] * 100)
-  ),
-  data_pull
-)
-
-
-```
-
-Now let's look at the potential profits of selling a QQQ Jan 20th, 2023 \$255 Put.
-
-```{r}
-
-lineplot_profit(
-  short_put_profit(
-    data_pull,
-    255
-  ),
-  paste0(
-    "Profit, Short the Jan 20th, 2023 QQQ $255 Put\nInitial premium received: $",
-    as.character(data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100)
-    ),
-  data_pull
-)
-
-```
-
-The covered put profits are the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
-
-```{r}
-
-lineplot_profit(
-  covered_put_profit(
-    data_pull, 
-    255,
-    0.0875
-    ),
-  paste0(
-  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $255 Put\nCost Basis: $",
-  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100))
-  ),
-  data_pull
-)
-
-```
-
-### Reducing the volatility of equity positions
-
-Instead of using the premium received from selling a call against a long equity position to reduce the cost basis of that position, we can use it to finance a put to protect the position from downside risk. This offers a way to maintain a position at reduced volatility on either side for what ideally is a zero-cost position. Let's model a long collar on 100 shares of QQQ. Now the most we can gain in this position is \$2,224.00 and the most we can lose is \$2,256.00. The cost of putting this collar on around our position is \$43.
-
-```{r}
-
-lineplot_profit(
-  long_collar_profit(
-    data_pull, 
-    305, 
-    260
-    ),
-  paste0(
-  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $305 Call\nLong the Jan 20th 2022 $260 Put\nCollar Protection Cost Basis: $",
-  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
-  ),
-  data_pull
-)
-
-```
-
-We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium plus \$43 dollars and limiting our maximum possible profit to \$863.96.
-
-```{r}
-
-lineplot_profit(
-  short_collar_profit(
-    data_pull, 
-    260, 
-    0.0875,
-    305
-    ),
-  paste0(
-  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection Cost Basis: $",
-  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
-  ),
-  data_pull
-)
-
-```
-
-
 # Single point-in-time spreads
 
 Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes Model).
 
 ### Long Vertical Spreads (Debit Spreads)
 
-Long vertical spreads are constructed by simultaneously buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. Let's first look at the payoff for a bullish call vertical spread starting with just a Jan 20, 2023 QQQ $280 Call.
+Long vertical spreads are constructed by simultaneously buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
+
+```{r}
+
+source("payout_functions.R")
+```
+
+Let's first look at the payoff for a bullish call vertical spread starting with just a Jan 20, 2023 QQQ $280 Call.
 
 ```{r}
 
@@ -932,3 +663,335 @@ lineplot_profit(
 )
 
 ```
+
+
+
+### Reducing the cost basis of equity positions
+
+A common strategy to reduce cost basis of a position is the covered call or covered put strategy. This involves either the selling of a call against a long position of 100 shares or the selling of a put against a short position of 100 shares. Lets first create a function to model buying 100 shares (using our data as an input).
+
+```{r}
+
+# let's create a profit function for holding 100 shares
+buy_hundred_shares_profit <- function(option_chain_df){
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  buy_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (closing_price * 100) - (option_chain_df$underlying_close[1] * 100) 
+    }
+    )
+  
+  # we will call it expiration so it works with the 
+  # plotting function but its really trade exit price
+  buy_hundred_shares_profit_df <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = buy_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(buy_hundred_shares_profit_df)
+  
+}
+
+```
+
+
+Now let's look at the possible profit from holding a 100 shares long of QQQ at a range of given prices.
+
+```{r}
+
+lineplot_profit(
+  buy_hundred_shares_profit(
+    data_pull
+    ),
+  paste0("Profit, Long 100 shares QQQ\nCost Basis: $", as.character(data_pull$underlying_close[1] * 100)),
+  data_pull
+)
+
+```
+
+Now let's look at the premium we would receive for selling the QQQ Jan 20th, 2023 $355 Call.
+
+```{r}
+
+# create a sequence of possible closing prices
+possible_closing_prices <- seq(
+  0, 
+  max(data_pull[,"strike_price"]), 
+  0.01
+)
+  
+# apply our vector to the profit function
+possible_profits <- sapply(
+  possible_closing_prices, 
+  FUN = function(x){
+    call_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = 355, 
+      option_price =  data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"]
+    )
+    }
+  )
+
+sample_sell_call_profit <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = possible_profits
+  )
+
+lineplot_profit(
+  sample_sell_call_profit,
+  paste0("Profit, Short QQQ Jan 20th, 2023 $355 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 355, "mid"] * 100)),
+  data_pull
+  )
+
+```
+
+Let's look at what happens when we combine these two trades. Our upside is capped, but our cost basis has been reduced on trade entry. To fund the profit we simply sum the two data frames containing our prospective profit. Now let's model buying 100 shares of QQQ and selling the Jan 20th, 2023 \$355 Call against the position at the same time.
+
+```{r}
+
+lineplot_profit(
+  covered_call_profit(
+    data_pull, 
+    355
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $355 Call\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"] * 100))
+  ),
+  data_pull
+)
+
+```
+
+Selling a covered put is similar to selling a covered call, but instead can help us reduce the cost basis of holding a short position. The main difference in holding a short position is the margin interest incurred. In both the case of the covered call and the covered put, we are assuming entering the position un-levered at this point (assuming only 100% borrow for the short position or paying for the long position outright). In order to model this short position, we must calculate the carrying cost of the 100 shares for the period of the contract sold against it. Let's first model our interest. The interest accrued is simply the amount borrowed multiplied by the margin interest rate as a decimal, then divided by 360 to give us a daily carry cost. This is then multiplied by the number of days the amount is borrowed (daily rate times number of days).
+
+```{r}
+
+# calculate margin interest
+calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rate, number_borrow_days){
+  
+  # daily margin interest accrued
+  margin_interest_accrued <- ((borrow_amount * margin_interest_rate) / 360) * number_borrow_days
+  
+  return(margin_interest_accrued)
+ 
+}
+
+```
+
+Now that we can calculate our carry costs, the function to find potential profits of the short position is similar to the long position with a two notable exceptions. In the long position we subtract our entry price from our exit price. Selling shares short reverses this order so that we must subtract our exit price (what we paid to buy back) from our entry price (what it was sold at initially). We must also subtract the cost of carry we have calculated in order to gauge our short profit. This model does not account for any dividends that must be paid from being short.
+
+```{r}
+
+# let's create a profit function for shorting 100 shares
+short_hundred_shares_profit <- function(option_chain_df, margin_interest_rate, number_borrow_days){
+  
+  # initial sale
+  borrow_amount <- option_chain_df$underlying_close[1] * 100
+  
+  # interest accrued
+  interest_accrued <- calculate_margin_interest_accrued(
+    borrow_amount = borrow_amount, 
+    margin_interest_rate = margin_interest_rate, 
+    number_borrow_days = number_borrow_days
+    )
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  short_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (option_chain_df$underlying_close[1] * 100) - (closing_price * 100) - interest_accrued
+    }
+  )
+  
+  short_hundred_shares_profit_df <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = short_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(short_hundred_shares_profit_df)
+  
+}
+
+```
+
+Let's model the possible profits from selling short 100 shares of QQQ until Jan 20th, 2023 at an annualized margin interest rate of 8.75%.
+
+```{r}
+
+days_till_expiry <- as.numeric(data_pull$expiration_date[1] - data_pull$scrape_date[1])
+
+lineplot_profit(
+  short_hundred_shares_profit(
+    data_pull,
+    0.0875, 
+    days_till_expiry
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nCost Basis: $",
+  as.character(data_pull$underlying_close[1] * 100)
+  ),
+  data_pull
+)
+
+
+```
+
+Now let's look at the potential profits of selling a QQQ Jan 20th, 2023 \$255 Put.
+
+```{r}
+
+lineplot_profit(
+  short_put_profit(
+    data_pull,
+    255
+  ),
+  paste0(
+    "Profit, Short the Jan 20th, 2023 QQQ $255 Put\nInitial premium received: $",
+    as.character(data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100)
+    ),
+  data_pull
+)
+
+```
+
+The covered put profits are the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
+
+```{r}
+
+lineplot_profit(
+  covered_put_profit(
+    data_pull, 
+    255,
+    0.0875
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $255 Put\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100))
+  ),
+  data_pull
+)
+
+```
+
+### Reducing the volatility of equity positions
+
+Instead of using the premium received from selling a call against a long equity position to reduce the cost basis of that position, we can use it to finance a put to protect the position from downside risk. This offers a way to maintain a position at reduced volatility on either side for what ideally is a zero-cost position. Let's model a long collar on 100 shares of QQQ. Now the most we can gain in this position is \$2,224.00 and the most we can lose is \$2,256.00. The cost of putting this collar on around our position is \$43.
+
+```{r}
+
+lineplot_profit(
+  long_collar_profit(
+    data_pull, 
+    305, 
+    260
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $305 Call\nLong the Jan 20th 2022 $260 Put\nCollar Protection Cost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
+We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium plus \$43 dollars and limiting our maximum possible profit to \$863.96.
+
+```{r}
+
+lineplot_profit(
+  short_collar_profit(
+    data_pull, 
+    260, 
+    0.0875,
+    305
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection Cost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
+
+### Creating synthetic forward positions
+
+Synthetic positions involve buying one type of contract and selling the other to replicate the payoff of holding a futures or stock position (futures would be more appropriate as stock does not replicate the time-value elements). This works because of a simple equation based on European option pricing and put-call parity, but ignores pin risk. 
+
+$$
+C - P = F
+$$
+Where:
+
+C: Call contract at a given strike price
+
+P: Put contract at a given strike price
+
+F: Forward contract at a given strike price
+
+Simply put, this means being long the call and short the put is the same as being long the futures contract. Let's model a long synthetic forward position on QQQ with a Jan 20th, 2023 expiration. 
+
+
+```{r}
+
+lineplot_profit(
+  long_synthetic_forward(
+    data_pull, 
+    280
+    ),
+  paste0(
+  "Profit, Short the QQQ Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nInitial premium received: $",
+  as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
+Using some basic principals we can rearrange our previous equation:
+$$
+C - P = F
+$$
+so that:
+$$
+-C + P = -F
+$$
+To put this into an actionable trade, being short the call and long the put is equivalent to selling a futures contract. Let's model a synthetic short forward position in QQQ with a Jan 20th, 2023 expiry.
+
+```{r}
+
+lineplot_profit(
+  short_synthetic_forward(
+    data_pull, 
+    280
+    ),
+  paste0(
+  "Profit, Long the QQQ Jan 20th 2023 $260 Put\nShort the Jan 20th 2022 $305 Call\nInitial premium received: $",
+  as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+```
+
+
