@@ -1,0 +1,1186 @@
+---
+output: html_document
+title: 'Gamma Gamma Hey (an options analysis) Part Two:'
+layout: post
+---
+
+# Building Basic Options SME
+
+
+[Github link](https://github.com/sebidelamata/optionsBacktesting){target="_blank"}
+
+## Abstract
+
+In this post we will use data collected from [post one](https://sebidelamata.github.io/datascienceblog/2022/06/12/Gamma-Gamma-Hey-Part-One.html){target="_blank"} to educate ourselves on the basics behind option valuation as well as some common strategies used in option trading. To accomplish this we will be creating a series of functions as well as visualize some real world trades with Plotly. 
+
+## Single Option Valuation
+
+Equity options generally serve as a contract giving the owner the right to sell (a put) or buy (a call) 100 shares of the underlying at a given price. We will start of modeling these as European style options to start for the sake of simplicity. European options can only be exercised at the date of expiration, whereas American style options allow for early exercise up to and including the date of expiration.
+
+### Call Options
+
+As stated before, equity call options give the owner the right buy 100 shares of the underlying at a given price. The contract will be worth nothing if it expires before the underlying price has surpassed the strike price of the contract. It will otherwise be worth the difference between the market price of the underlying and the strike price of the contract. This basic payoff function can be modeled like so:
+
+```{r}
+
+library(dplyr)
+
+# The payoff for a call buyer at expiration date T is given by 
+# max(0, ST – X)
+call_buyer_payoff <- function(underlying_price_expiration, strike_price){
+  
+  # either zero or the difference in the strike and expiration
+  max(0, underlying_price_expiration - strike_price)
+  
+}
+
+```
+
+We can model the call buyer payoff for a near-the-money QQQ Jan 20th, 2023 call if we had bought the option on Friday July 1st, 2022. First, we need to grab the data from our PostgreSQL database. We went ahead and made the query process into a function as we will be repeating this a lot in the future.
+
+```{r}
+source("./query_sebis_pi.R")
+
+
+# our query (grab the whole option chain for that expiration)
+sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-07-01' AND underlying_ticker = 'QQQ' AND expiration_date = '2023-01-20';"
+
+data_pull <- query_sebis_pi(sql_query_string)
+
+```
+
+We will assume that the trader will be able to execute at the mid price. To do this we create a "mid" column by averaging the bid and the ask prices for each strike. 
+
+```{r}
+
+data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
+
+```
+
+
+Now we can apply our function across a vector of possible underlying expiration prices from \$250 to \$400 by penny increments to model possible profits. We then create a data frame to hold each vector: the possible prices at expiration and their corresponding possible profits.
+
+
+```{r}
+
+# select a near the money call
+qqq_atm_call_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C",]
+
+
+# apply our payoff function to a vector of possible underlying 
+# expiration prices from $250-$400 by penny increments
+two_fifty_call_payoff <- sapply(
+  seq(250,400, 0.01),
+  FUN = function(x){
+    call_buyer_payoff(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price
+      )
+    }
+)
+
+# create a df to hold values with possible underlying strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400, 0.01)
+)
+
+```
+
+Let's plot our potential payoffs across the possible underlying expiration prices. First we define the plotting function, then we apply it to the data frame of possible expiration prices and profits that we created earlier.
+
+```{r}
+
+# create a quick function to plot our payouts (we'll be doing a few)
+# plotting our payoff functions (plotly)
+# takes a profit df (2 columns profits and strikes)
+# and a Title for the plot
+lineplot_profit <- function(profit_df, title, option_chain_df){
+  
+  library(ggplot2)
+  library(plotly)
+  library(scales)
+  library(wesanderson)
+  library(htmlwidgets)
+  library(widgetframe)
+  
+  profit_lineplot <- ggplot(
+    data = profit_df,
+    aes(
+      x = possible_expiration_prices,
+      y = possible_profits,
+      group = 1,
+      text = paste(
+        option_chain_df$underlying_ticker,
+        " Price: ",
+        paste0("$", formatC(as.numeric(possible_expiration_prices), format="f", digits=2, big.mark=",")),
+        "<br>Profit: ",
+        paste0("$", formatC(as.numeric(possible_profits), format="f", digits=2, big.mark=","))
+      )
+    )
+  ) +
+    geom_line(color = wesanderson::wes_palette("Royal1")[3]) +
+    ggtitle(title) +
+    xlab("Possible Expiration Prices") +
+    ylab("Profit (USD $)") +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      plot.background = element_rect(fill = wes_palette("Darjeeling2")[5], color = wes_palette("Darjeeling2")[5]),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      axis.text.y = element_text(color = wesanderson::wes_palette("Royal1")[3]),
+      legend.position = "none",
+      text = element_text(color = wesanderson::wes_palette("Royal1")[3])
+      ) +
+    scale_y_continuous(
+      labels = scales::dollar_format(),
+      limits = c(
+        min(profit_df$possible_profits) - abs(min(profit_df$possible_profits)),
+        max(profit_df$possible_profits) + abs(max(profit_df$possible_profits))
+        )
+      ) +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    geom_hline(
+      yintercept = 0,
+      linetype = "dashed",
+      color = wesanderson::wes_palette("Royal1")[3],
+      size = 0.3
+      ) +
+    geom_vline(
+      xintercept = option_chain_df$underlying_close[1],
+      linetype = "dashed",
+      color = "white",
+      size = 0.075
+    ) +
+    scale_color_manual(values = wesanderson::wes_palette("Royal1")[3])
+  
+  profit_lineplot <- plotly::ggplotly(profit_lineplot, tooltip = c("text"))
+                      
+  return(profit_lineplot)
+  
+}
+
+# now let's plot our payout
+two_fifty_call_payoff <- lineplot_profit(
+  two_fifty_call_payoff, 
+  paste0("Payoff, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(qqq_atm_call_jan_twenty$mid), " per share"),
+  qqq_atm_call_jan_twenty
+  )
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_payoff),
+  "gamma_gamma_hey_part_two_plot_01.html",
+  selfcontained = TRUE
+)
+
+
+```
+
+
+To clarify, the above shows the payoff on a per-share basis. This also excludes the price the call buyer has to pay for the contract (the premium). To incorporate the cost of the contract we can build the following function off of our previous function. 
+
+```{r}
+
+# profit is equal to payoff minus the initial premium
+call_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (call_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
+}
+
+```
+
+Notice that this function multiplies the outcome by 100, giving us the profit at the per contract level, where before where we looked at payoff on a per-share basis. Now let's model the same QQQ contract as before. We will achieve 100% returns if the underlying price passes \$336.17.
+
+```{r}
+
+# apply our profit function
+two_fifty_call_payoff <- sapply(
+  seq(250,400, 0.01),
+  FUN = function(x){
+    call_buyer_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price,
+      option_price = qqq_atm_call_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_call_profit <- lineplot_profit(
+  two_fifty_call_payoff, 
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(qqq_atm_call_jan_twenty$mid * 100)),
+  qqq_atm_call_jan_twenty
+  )
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_profit),
+  "gamma_gamma_hey_part_two_plot_02.html",
+  selfcontained = TRUE
+)
+
+```
+
+On the other side of this trade is the call seller. Their profit is simply the opposite of the buyer's, and this trade would be bearish as opposed to the bullish call buyer. To calculate the seller profits we can simply negate the results of performing the buyer payoff function.
+
+```{r}
+
+# seller payoff is inverse of buyer payoff
+call_seller_payoff <- function(underlying_price_expiration, strike_price){
+  -call_buyer_payoff(underlying_price_expiration, strike_price)
+}
+
+
+# seller profit is seller payout plus what they originally received for selling the option
+call_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (call_seller_payoff(underlying_price_expiration, strike_price) + option_price)
+}
+
+
+```
+
+Now we can model the same call as before, but from the other side of the trade. Instead of paying \$2808.50 for the contract we receive that as a premium up front. The trade would not start losing money until QQQ rose above $308.08 per share.
+
+```{r}
+
+# apply our profit function
+two_fifty_call_payoff <- sapply(
+  seq(250,400, 0.01),
+  FUN = function(x){
+    call_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_call_jan_twenty$strike_price,
+      option_price = qqq_atm_call_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_call_payoff <- data.frame(
+  possible_profits = two_fifty_call_payoff,
+  possible_expiration_prices = seq(250, 400, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_call_profit <- lineplot_profit(
+  two_fifty_call_payoff, 
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Call\nInitial premium received: $", as.character(qqq_atm_call_jan_twenty$mid * 100)),
+  qqq_atm_call_jan_twenty
+  )
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_profit),
+  "gamma_gamma_hey_part_two_plot_03.html",
+  selfcontained = TRUE
+)
+
+```
+
+Notice that unlike before where maximum loss is defined and profit is undefined, selling a call has a defined maximum profit (the premium received from selling the contract) and an undefined loss. Some throw the term "unlimited" or "infinite" around, but this is deceiving as the probability of the underlying swinging further in either direction has a negative relationship to the size of the move. 
+
+
+### Put Options
+
+An equity put contract gives the holder of the contract the right to force the counterparty to buy 100 shares at a given strike price. We can calculate the payoff for a put buyer by reversing the order we used to calculate call payoff (now using strike - expiration).
+
+```{r}
+
+# put buyer payout is the opposite order (strike minus expiration) from the call buyer
+put_buyer_payoff <- function(underlying_price_expiration, strike_price){
+  
+  # either zero or the strike prize minus expiration
+  max(0, strike_price - underlying_price_expiration)
+
+}
+
+```
+
+Now let's apply the put payoff function to the same strike and expiration contract for QQQ that we used on the call.
+
+```{r}
+
+# select the at the money
+qqq_atm_put_jan_twenty <- data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P",]
+
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_buyer_payoff(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our payout
+two_fifty_put_payoff <- lineplot_profit(
+  two_fifty_put_payoff, 
+  paste0("Payoff, Long the QQQ Jan 20th, 2023 $280 Put\nCost Basis: $", as.character(qqq_atm_put_jan_twenty$mid), " per share"),
+  qqq_atm_put_jan_twenty
+  )
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_payoff),
+  "gamma_gamma_hey_part_two_plot_04.html",
+  selfcontained = TRUE
+)
+
+```
+
+We also have to take into account the cost of the contract premium, similar to what we did with our earlier long call. 
+
+
+```{r}
+
+# put buyer profit equals payoff minus initial premium paid
+put_buyer_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (put_buyer_payoff(underlying_price_expiration, strike_price) - option_price)
+}
+
+```
+
+Let's apply this to the same put contract. Unlike being long a call, being long a put has a capped potential profits as the underlying can not go lower than zero in the case of equities.
+
+```{r}
+
+# apply our profit function
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_buyer_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price,
+      option_price = qqq_atm_put_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_put_profit <- lineplot_profit(
+  two_fifty_put_payoff, 
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Put\nCost Basis: $", as.character(qqq_atm_put_jan_twenty$mid * 100)),
+  qqq_atm_put_jan_twenty
+  )
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_profit),
+  "gamma_gamma_hey_part_two_plot_05.html",
+  selfcontained = TRUE
+)
+
+```
+
+We also of course have a seller where we have a buyer. We also model this similarly to the calls. Just like selling a call before, we receive a premium up front. Being short a put is a bullish position.
+
+```{r}
+
+# seller payoff is inverse of buyer payoff
+put_seller_payoff <- function(underlying_price_expiration, strike_price){
+  -put_buyer_payoff(underlying_price_expiration, strike_price)
+}
+
+
+# seller profit is seller payout plus what they originally received for selling the option
+put_seller_profit <- function(underlying_price_expiration, strike_price, option_price){
+  100 * (put_seller_payoff(underlying_price_expiration, strike_price) + option_price)
+}
+
+
+```
+
+Now let's model this on our same QQQ \$280 put.
+
+```{r}
+
+# apply our profit function
+two_fifty_put_payoff <- sapply(
+  seq(100,300, 0.01),
+  FUN = function(x){
+    put_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = qqq_atm_put_jan_twenty$strike_price,
+      option_price = qqq_atm_put_jan_twenty$mid
+      )
+    }
+)
+
+# create a df to hold values with possible strikes at expiration
+two_fifty_put_payoff <- data.frame(
+  possible_profits = two_fifty_put_payoff,
+  possible_expiration_prices = seq(100, 300, 0.01)
+)
+
+# now let's plot our profit
+two_fifty_put_profit <- lineplot_profit(
+  two_fifty_put_payoff, 
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Put\nInitial premium received: $", as.character(qqq_atm_put_jan_twenty$mid * 100)),
+  qqq_atm_put_jan_twenty
+  )
+
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_profit),
+  "gamma_gamma_hey_part_two_plot_06.html",
+  selfcontained = TRUE
+)
+
+```
+
+## Basic Point-in-Time Option Spread Strategies
+
+Buying and selling calls and/or puts at different strikes can provide payoff structures that provide some advantages. They can allow us to define our maximum gain and/or loss in a situation where it would otherwise be undefined. Spreads can also offer lower capital requirements to take on a position than would a "naked" (single option) position. In addition, spreads can be used to target aspects associated with the Greeks (variables associated with the Black-Scholes-Merton model) that allow us to profit from time and volatility rather than just direction of the underlying.
+
+### Long Vertical Spreads (Debit Spreads)
+
+Long vertical spreads are constructed by simultaneously buying a contract and selling another at a different strike for a net initial cost. The premium obtained up-front from selling one contract finances the long leg. This position insures that the long leg will be further in-the-money than the short leg, meaning if the short leg is breached the trade will have reached maximum profit. For the sake of not repeating a whole bunch of code, let's go ahead and source the script containing all of the payout and profit functions we have written.
+
+```{r}
+
+source("payout_functions.R")
+```
+
+Let's first look at the payoff for a bullish call vertical spread by starting with just a Jan 20, 2023 QQQ $280 Call (the long leg of the trade).
+
+```{r}
+
+long_leg <- lineplot_profit(
+  long_call_profit(
+    data_pull, 
+    280
+    ), 
+  paste0("Profit, Long the QQQ Jan 20th, 2023 $280 Call\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100)),
+  qqq_atm_call_jan_twenty
+  )
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_07.html",
+  selfcontained = TRUE
+)
+
+```
+
+Our up-front cost of buying this call is \$2,808.50. We would forfeit all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$308.09. Now let's look at what happens if we sold a call five dollars further out of the money.
+
+```{r}
+
+short_leg <- lineplot_profit(
+  short_call_profit(
+    data_pull,
+    285
+  ),
+  paste0("Profit, Short the QQQ Jan 20th, 2023 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100)),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_08.html",
+  selfcontained = TRUE
+)
+
+```
+
+If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades' profit across each strike. The function I created in R does basically this; it runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs into a new column. The result of this spread is a bullish trade with a capped upside and reduced downside risk.
+
+```{r}
+
+call_spread <- lineplot_profit(
+  call_vertical_profit(
+    data_pull,
+    280,
+    285
+  ),
+  paste0("Profit, QQQ Jan 20th, 2023:\nLong the $280 Call, Short the $285 Call\nCost Basis: $",as.character((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100))),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(call_spread),
+  "gamma_gamma_hey_part_two_plot_09.html",
+  selfcontained = TRUE
+)
+
+```
+
+We can mirror a vertical debit spread for a put by buying a put and selling another further out-of-the-money. This gives us a spread that trades bearish with capped potential profits and reduced entry cost. Again here is a single long put (lets choose slightly out of the money).
+
+```{r}
+
+
+long_leg <- lineplot_profit(
+  long_put_profit(
+    data_pull,
+    270
+  ),
+  paste0("Profit, Long QQQ Jan 20th, 2023 $270 Put\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_10.html",
+  selfcontained = TRUE
+)
+
+```
+
+And if we sold the \$265 (further out-of-the-money) put:
+
+```{r}
+
+
+short_leg <- lineplot_profit(
+  short_put_profit(
+    data_pull,
+    265
+  ),
+  paste0("Profit, Short QQQ Jan 20th, 2023 $265 Put\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100)),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_11.html",
+  selfcontained = TRUE
+)
+
+```
+
+The function to calculate the profits from the put vertical spread is again simply the sum of the long and short payoffs.
+
+```{r}
+
+put_spread <- lineplot_profit(
+  put_vertical_profit(
+    data_pull,
+    270,
+    265
+  ),
+  paste0("Profit, QQQ Jan 20th, 2023:\nLong the $270 Put, Short the $265 Put\nCost Basis: $", as.character((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100))),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(put_spread),
+  "gamma_gamma_hey_part_two_plot_12.html",
+  selfcontained = TRUE
+)
+
+```
+
+### Short Vertical Spreads (Credit Spreads)
+
+Just like we can use a spread trade for a net long position, we can create a net short position. Net short positions will result in us receiving a premium up front instead of having to buy into a position. Let's look at the inverse of the call debit spread position we just illustrated. First we sell a call closer to the money.
+
+```{r}
+
+short_leg <- lineplot_profit(
+  short_call_profit(
+    qqq_atm_call_jan_twenty, 
+    280
+    ), 
+  paste0("Profit, Short the QQQ Jan 20th, 2023 $280 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100)),
+  data_pull
+  )
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_13.html",
+  selfcontained = TRUE
+)
+
+```
+
+Then we buy a call further from the money (the opposite of a debit spread).
+
+```{r}
+
+long_leg <- lineplot_profit(
+  long_call_profit(
+    data_pull,
+    285
+  ),
+  paste0("Profit, Long the QQQ Jan 20th, 2023 Call\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100)),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_14.html",
+  selfcontained = TRUE
+)
+
+```
+
+The result is a spread that allows us to take a short position and define the risk of the trade (otherwise undefined when selling a call). If you look at the code below, you will notice it is identical to the code for the debit spread except with the strikes reversed.
+
+```{r}
+
+call_spread <- lineplot_profit(
+  call_vertical_profit(
+    data_pull,
+    285,
+    280
+  ),
+  paste0("Profit, QQQ Jan 20th, 2023:\nShort the $280 Call, Long the $285 Call\nInitial premium received: $", as.character((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 285, "mid"] * 100))),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(call_spread),
+  "gamma_gamma_hey_part_two_plot_15.html",
+  selfcontained = TRUE
+)
+
+```
+
+We can also use a short put vertical spread to create a bullish position that receives a credit up front with reduced cost of entry compared to selling the naked put. Here is the same put spread we did before, but with the strikes reversed to make it a net short position.
+
+```{r}
+
+put_spread <- lineplot_profit(
+  put_vertical_profit(
+    data_pull,
+    265,
+    270
+  ),
+  paste0("Profit, QQQ Jan 20th, 2023:\nShort the $270 Put, Long the $265 Put\nInitial premium received: $", as.character((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 265, "mid"] * 100))),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(put_spread),
+ "gamma_gamma_hey_part_two_plot_16.html",
+  selfcontained = TRUE
+)
+
+```
+
+### Short and Long Iron Condors/Butterflies
+
+Though the name seems exotic, Iron Condors are simply a put vertical spread combined with a call spread. This also sounds counter intuitive, but selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being "right" on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
+
+```{r}
+
+short_condor <- lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    340,
+    330,
+    230,
+    240
+  ),
+  paste0(
+    "Iron Condor, QQQ Jan 20, 2023:\nShort the $330 Call, Long the $340\nShort the $240 Put, Long the $230\nInitial premium received: $", 
+    as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 330, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 340, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 240, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 230, "mid"] * 100)))
+    ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_condor),
+  "gamma_gamma_hey_part_two_plot_17.html",
+  selfcontained = TRUE
+)
+
+```
+
+A long condor would be the opposite of the previous trade. This trade would profit given a big move in either direction (or a significant increase in volatility as this position is a net debit).
+
+```{r}
+
+long_condor <- lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    330,
+    340,
+    240,
+    230
+  ),
+  paste0("Iron Condor, QQQ Jan 20, 2023:\nLong the $330 Call, Short the $340\nLong the $240 Put, Short the $230\nCost Basis: $",
+         as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 330, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 340, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 240, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 230, "mid"] * 100)))
+         ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_condor),
+  "gamma_gamma_hey_part_two_plot_18.html",
+  selfcontained = TRUE
+)
+
+```
+
+An Iron Butterfly is very similar to an Iron Condor, except that both of the closer to the money contracts share the same strike (usually near-the-money). The short Iron Butterfly illustrated here creates for much higher risk-reward ratio (in this case ~15.5:1), albeit at the cost of a lot of potential risk management and related trade commissions from having to adjust the strikes.
+
+```{r}
+
+short_butterfly <- lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    290,
+    280,
+    270,
+    280
+  ),
+  paste0("Iron Butterfly, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230\nInitial premium received: $",
+         as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 290, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)))
+         ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_butterfly),
+  "gamma_gamma_hey_part_two_plot_19.html",
+  selfcontained = TRUE
+)
+
+```
+
+The long Iron Butterfly provides the opposite scenario: a low payout (~6.5%) for a very wide range of strikes with a very extreme downside scenario.
+
+```{r}
+
+long_butterfly <- lineplot_profit(
+  iron_condor_profit(
+    option_chain_df = data_pull,
+    280,
+    290,
+    280,
+    270
+  ),
+  paste0(
+    "Iron Condor, QQQ Jan 20, 2023:\nShort the $380 Call, Long the $340\nShort the $280 Put, Long the $230\nCost Basis: $",
+    as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 290, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)))
+    ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_butterfly),
+  "gamma_gamma_hey_part_two_plot_20.html",
+  selfcontained = TRUE
+)
+
+```
+
+
+
+### Reducing the cost basis of equity positions
+
+A common strategy to reduce cost basis of a position is the covered call or covered put strategy. This involves either the selling of a call against a long position of 100 shares or the selling of a put against a short position of 100 shares. Lets first create a function to model buying 100 shares (using our data as an input).
+
+```{r}
+
+# let's create a profit function for holding 100 shares
+buy_hundred_shares_profit <- function(option_chain_df){
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  buy_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (closing_price * 100) - (option_chain_df$underlying_close[1] * 100) 
+    }
+    )
+  
+  # we will call it expiration so it works with the 
+  # plotting function but its really trade exit price
+  buy_hundred_shares_profit_df <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = buy_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(buy_hundred_shares_profit_df)
+  
+}
+
+```
+
+
+Now let's look at the possible profit from holding a 100 shares long of QQQ at a range of given prices.
+
+```{r}
+
+long_shares <- lineplot_profit(
+  buy_hundred_shares_profit(
+    data_pull
+    ),
+  paste0("Profit, Long 100 shares QQQ\nCost Basis: $", as.character(data_pull$underlying_close[1] * 100)),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_shares),
+  "gamma_gamma_hey_part_two_plot_21.html",
+  selfcontained = TRUE
+)
+
+```
+
+Now let's look at the premium we would receive for selling the QQQ Jan 20th, 2023 $355 Call.
+
+```{r}
+
+# create a sequence of possible closing prices
+possible_closing_prices <- seq(
+  0, 
+  max(data_pull[,"strike_price"]), 
+  0.01
+)
+  
+# apply our vector to the profit function
+possible_profits <- sapply(
+  possible_closing_prices, 
+  FUN = function(x){
+    call_seller_profit(
+      underlying_price_expiration = x, 
+      strike_price = 355, 
+      option_price =  data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"]
+    )
+    }
+  )
+
+sample_sell_call_profit <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = possible_profits
+  )
+
+short_leg <- lineplot_profit(
+  sample_sell_call_profit,
+  paste0("Profit, Short QQQ Jan 20th, 2023 $355 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 355, "mid"] * 100)),
+  data_pull
+  )
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_22.html",
+  selfcontained = TRUE
+)
+
+```
+
+Let's look at what happens when we combine these two trades. Our upside is capped, but our cost basis has been reduced on trade entry. To fund the profit we simply sum the two data frames containing our prospective profit. Now let's model buying 100 shares of QQQ and selling the Jan 20th, 2023 \$355 Call against the position at the same time.
+
+```{r}
+
+covered_call <- lineplot_profit(
+  covered_call_profit(
+    data_pull, 
+    355
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $355 Call\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"] * 100))
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(covered_call),
+  "gamma_gamma_hey_part_two_plot_23.html",
+  selfcontained = TRUE
+)
+
+```
+
+Selling a covered put is similar to selling a covered call, but instead can help us reduce the cost basis of holding a short position. The main difference in holding a short position is the margin interest incurred. In both the case of the covered call and the covered put, we are assuming entering the position un-levered at this point (assuming 100% cash funcing of borrow for the short position or paying for the long position outright). In order to model this short position, we must calculate the carrying cost of the 100 shares for the period of the contract sold against it. Let's first model our interest. The interest accrued is simply the amount borrowed multiplied by the margin interest rate as a decimal, then divided by 360 to give us a daily carry cost. This is then multiplied by the number of days the amount is borrowed (daily rate times number of days).
+
+```{r}
+
+# calculate margin interest
+calculate_margin_interest_accrued <- function(borrow_amount, margin_interest_rate, number_borrow_days){
+  
+  # daily margin interest accrued
+  margin_interest_accrued <- ((borrow_amount * margin_interest_rate) / 360) * number_borrow_days
+  
+  return(margin_interest_accrued)
+ 
+}
+
+```
+
+Now that we can calculate our carry costs, the function to find potential profits of the short position is similar to the long position with two notable exceptions. In the long position we subtract our entry price from our exit price. Selling shares short reverses this order so that we must subtract our exit price (what we paid to buy back) from our entry price (what it was sold at initially). We must also subtract the cost of carry we have calculated in order to gauge our short profit. This model does not account for any dividends that must be paid from being short.
+
+```{r}
+
+# let's create a profit function for shorting 100 shares
+short_hundred_shares_profit <- function(option_chain_df, margin_interest_rate, number_borrow_days){
+  
+  # initial sale
+  borrow_amount <- option_chain_df$underlying_close[1] * 100
+  
+  # interest accrued
+  interest_accrued <- calculate_margin_interest_accrued(
+    borrow_amount = borrow_amount, 
+    margin_interest_rate = margin_interest_rate, 
+    number_borrow_days = number_borrow_days
+    )
+  
+  # create a sequence of possible closing prices
+  possible_closing_prices <- seq(
+    0, 
+    max(option_chain_df[,"strike_price"]), 
+    0.01
+  )
+  
+  # apply our vector to the profit function
+  short_hundred_shares_profit <- sapply(
+    possible_closing_prices, 
+    function(closing_price){
+      (option_chain_df$underlying_close[1] * 100) - (closing_price * 100) - interest_accrued
+    }
+  )
+  
+  short_hundred_shares_profit_df <- data.frame(
+    possible_expiration_prices = possible_closing_prices,
+    possible_profits = short_hundred_shares_profit
+  )
+  
+  # return our dataframe
+  return(short_hundred_shares_profit_df)
+  
+}
+
+```
+
+Let's model the possible profits from selling short 100 shares of QQQ until Jan 20th, 2023 at an annualized margin interest rate of 8.75%.
+
+```{r}
+
+days_till_expiry <- as.numeric(data_pull$expiration_date[1] - data_pull$scrape_date[1])
+
+short_shares <- lineplot_profit(
+  short_hundred_shares_profit(
+    data_pull,
+    0.0875, 
+    days_till_expiry
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nCost Basis: $",
+  as.character(data_pull$underlying_close[1] * 100)
+  ),
+  data_pull
+)
+
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_shares),
+  "gamma_gamma_hey_part_two_plot_24.html",
+  selfcontained = TRUE
+)
+
+```
+
+Now let's look at the potential profits of selling a QQQ Jan 20th, 2023 \$255 Put.
+
+```{r}
+
+short_leg <- lineplot_profit(
+  short_put_profit(
+    data_pull,
+    255
+  ),
+  paste0(
+    "Profit, Short the Jan 20th, 2023 QQQ $255 Put\nInitial premium received: $",
+    as.character(data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100)
+    ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_25.html",
+  selfcontained = TRUE
+)
+
+```
+
+The covered put profits are the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
+
+```{r}
+
+covered_put <- lineplot_profit(
+  covered_put_profit(
+    data_pull, 
+    255,
+    0.0875
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $255 Put\nCost Basis: $",
+  as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 255 & data_pull$contract_type == "P", "mid"] * 100))
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(covered_put),
+  "gamma_gamma_hey_part_two_plot_26.html",
+  selfcontained = TRUE
+)
+
+```
+
+### Reducing the volatility of equity positions
+
+Instead of using the premium received from selling a call against a long equity position to reduce the cost basis of that position, we can use it to finance a put to protect the position from downside risk. This offers a way to maintain a position at reduced volatility on either side for what ideally is a zero-cost position. Let's model a long collar on 100 shares of QQQ. Now the most we can gain in this position is \$2,224.00 and the most we can lose is \$2,256.00. The cost of putting this collar on around our position is \$43.
+
+```{r}
+
+long_collar <- lineplot_profit(
+  long_collar_profit(
+    data_pull, 
+    305, 
+    260
+    ),
+  paste0(
+  "Profit, Long 100 shares QQQ\nShort the Jan 20th 2023 $305 Call\nLong the Jan 20th 2022 $260 Put\nCollar Protection Cost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_collar),
+  "gamma_gamma_hey_part_two_plot_27.html",
+  selfcontained = TRUE
+)
+
+```
+
+We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium (plus a \$43 dollar credit we get to pocket) and limiting our maximum possible profit to \$863.96.
+
+```{r}
+
+short_collar <- lineplot_profit(
+  short_collar_profit(
+    data_pull, 
+    260, 
+    0.0875,
+    305
+    ),
+  paste0(
+  "Profit, Short 100 shares QQQ\nShort the Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCollar Protection premium received: $",
+  as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_collar),
+  "gamma_gamma_hey_part_two_plot_28.html",
+  selfcontained = TRUE
+)
+
+```
+
+
+### Creating synthetic forward positions
+
+Synthetic positions involve buying one type of contract and selling the other to replicate the payoff of holding a futures or stock position (futures would be more appropriate as stock does not replicate the time-value elements). This works because of a simple equation based on European option pricing and put-call parity, but ignores pin risk. 
+
+$$
+C - P = F
+$$
+Where:
+
+C: Call contract at a given strike price
+
+P: Put contract at a given strike price
+
+F: Forward contract at a given strike price
+
+Simply put, this means being long the call and short the put is the same as being long the futures contract. Let's model a long synthetic forward position on QQQ with a Jan 20th, 2023 expiration. 
+
+
+```{r}
+
+long_forward <- lineplot_profit(
+  long_synthetic_forward(
+    data_pull, 
+    280
+    ),
+  paste0(
+  "Profit, Short the QQQ Jan 20th 2023 $260 Put\nLong the Jan 20th 2022 $305 Call\nCost Basis: $",
+  as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_forward),
+  "gamma_gamma_hey_part_two_plot_29.html",
+  selfcontained = TRUE
+)
+
+```
+
+Using some basic algebraic principals we can rearrange our previous equation:
+$$
+C - P = F
+$$
+so that:
+$$
+-C + P = -F
+$$
+To put this into an actionable trade, being short the call and long the put is equivalent to selling a futures contract. Let's model a synthetic short forward position in QQQ with a Jan 20th, 2023 expiry that pockets us an initial premium of \$479.
+
+```{r}
+
+short_forward <- lineplot_profit(
+  short_synthetic_forward(
+    data_pull, 
+    280
+    ),
+  paste0(
+  "Profit, Long the QQQ Jan 20th 2023 $260 Put\nShort the Jan 20th 2022 $305 Call\nInitial premium received: $",
+  as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
+  ),
+  data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_forward),
+  "gamma_gamma_hey_part_two_plot_30.html",
+  selfcontained = TRUE
+)
+
+```
+
+
+
+An array of different profit structures can be created by going long and short calls and puts at different strikes. However, all of the strategies we have examined so far have contracts containing the same expiration and have only been valued at expiration. In order to look at values before expiration or strategies spread across different expirations we will need to get the Greeks involved. In the next post, we will examine the Black-Scholes-Merton model and look at how it's variables can help us solve this problem.  
+
+###### (Obviously, nothing in this article constitutes anything in the way of trading advice, financial advice, life advice, or fashion advice. If you take any position even slightly resembling these trades you will likely lose money, and when you go out in public groups of children will gather to point at you and laugh and call you a "stupid head".) 

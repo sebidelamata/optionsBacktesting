@@ -1,5 +1,6 @@
 
 
+<<<<<<< HEAD
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -45,5 +46,82 @@ watchlist_data <- do.call(
   )
 
 glimpse(watchlist_data)
+=======
+Grab fridays data
+
+```{r}
+
+
+library(RPostgreSQL)
+library(getPass)
+
+# set driver name
+driver_name <- dbDriver(drvName = "PostgreSQL")
+
+# establish database connection
+db <- DBI::dbConnect(driver_name,
+                     dbname = "sebi",
+                     host = "192.168.0.12",
+                     port = 5432,
+                     user = "sebi",
+                     password = getPass("Enter Password:")
+)
+
+# our query
+sql_query_string <- "SELECT * FROM watchlist_data WHERE scrape_date = '2022-06-27';"
+
+# combination of our connnection stuff and our query stuff
+res <- dbSendQuery(db, sql_query_string)
+
+# fetch our data query from the database and return a dataframe
+data_pull <- dbFetch(res)
+
+# clear our query results
+dbClearResult(res)
+
+# politely disconnect from the database
+dbDisconnect(db)
+
+```
+
+
+```{r}
+
+source("payout_functions.R")
+
+# create a mid price
+data_pull$mid <- (data_pull$bid + data_pull$ask) / 2
+
+# lets grab the QQQ Jan 20th 2023 calls
+long_call_chain <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$expiration_date == as.Date("2023-01-20"),]
+
+# lets grab the QQQ July 27th calls
+short_call_chain <- data_pull[data_pull$underlying_ticker == "QQQ" & data_pull$expiration_date == as.Date("2022-07-27"),]
+
+long_call_strike <- 335
+
+short_call_strike <- 335
+
+sample_long <- long_call_profit(
+  long_call_chain,
+  long_call_strike
+)
+
+sample_short <- short_call_profit(
+  short_call_chain,
+  short_call_strike
+)
+
+# sample_pmcc <- call_diagonal_profit(
+#   long_call_chain, 
+#   long_call_strike,
+#   short_call_chain,
+#   short_call_strike
+#   )
+
+lineplot_profit(sample_long, "QQQ Long Jan 20th, 2023 $335 Call")
+lineplot_profit(sample_short, "QQQ Short July 27th $335 Call")
+#lineplot_profit(sample_pmcc, "QQQ Long Jan 20th, 2023 Call\nShort July 27th Call")
+>>>>>>> single_point_eda
 
 ```
