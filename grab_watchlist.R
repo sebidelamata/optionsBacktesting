@@ -26,13 +26,9 @@ grab_watchlist <- function(){
     "GLD",
     "SLV",
     "TLT",
-<<<<<<< HEAD
     "HYG"
-=======
-    "HYG",
     "FXY",
     "XLE"
->>>>>>> single_point_eda
   )
   
   # create an empty dataframe 
