@@ -2,7 +2,6 @@
 output: html_document
 title: 'Gamma Gamma Hey (an options analysis) Part Two:'
 layout: post
-date: "`r Sys.Date()`"
 ---
 
 # Building Basic Options SME
@@ -102,6 +101,8 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
   library(plotly)
   library(scales)
   library(wesanderson)
+  library(htmlwidgets)
+  library(widgetframe)
   
   profit_lineplot <- ggplot(
     data = profit_df,
@@ -169,9 +170,15 @@ two_fifty_call_payoff <- lineplot_profit(
   )
 
 
-two_fifty_call_payoff
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_payoff),
+  "gamma_gamma_hey_part_two_plot_01.html",
+  selfcontained = TRUE
+)
+
 
 ```
+
 
 To clarify, the above shows the payoff on a per-share basis. This also excludes the price the call buyer has to pay for the contract (the premium). To incorporate the cost of the contract we can build the following function off of our previous function. 
 
@@ -214,7 +221,11 @@ two_fifty_call_profit <- lineplot_profit(
   )
 
 
-two_fifty_call_profit
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_profit),
+  "gamma_gamma_hey_part_two_plot_02.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -266,7 +277,11 @@ two_fifty_call_profit <- lineplot_profit(
   )
 
 
-two_fifty_call_profit
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_call_profit),
+  "gamma_gamma_hey_part_two_plot_03.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -320,7 +335,11 @@ two_fifty_put_payoff <- lineplot_profit(
   )
 
 
-two_fifty_put_payoff
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_payoff),
+  "gamma_gamma_hey_part_two_plot_04.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -366,7 +385,11 @@ two_fifty_put_profit <- lineplot_profit(
   )
 
 
-two_fifty_put_profit
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_profit),
+  "gamma_gamma_hey_part_two_plot_05.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -418,7 +441,12 @@ two_fifty_put_profit <- lineplot_profit(
   )
 
 
-two_fifty_put_profit
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(two_fifty_put_profit),
+  "gamma_gamma_hey_part_two_plot_06.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -439,7 +467,7 @@ Let's first look at the payoff for a bullish call vertical spread by starting wi
 
 ```{r}
 
-lineplot_profit(
+long_leg <- lineplot_profit(
   long_call_profit(
     data_pull, 
     280
@@ -448,13 +476,19 @@ lineplot_profit(
   qqq_atm_call_jan_twenty
   )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_07.html",
+  selfcontained = TRUE
+)
+
 ```
 
 Our up-front cost of buying this call is \$2,808.50. We would forfeit all of our initial investment if QQQ closed below \$280.00 on Jan 20th (barring early exercise), and we would not start to profit until QQQ surpassed \$308.09. Now let's look at what happens if we sold a call five dollars further out of the money.
 
 ```{r}
 
-lineplot_profit(
+short_leg <- lineplot_profit(
   short_call_profit(
     data_pull,
     285
@@ -463,13 +497,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_08.html",
+  selfcontained = TRUE
+)
+
 ```
 
 If we sold this call we would receive an upfront payment of \$2,528.00. We would not start losing money on this trade until the price of QQQ moved past \$310.27. As we saw before, the profit structure is the opposite to the long call, although this time at a different (higher) strike. If we made both of these trades simultaneously, our profit structure is merely the sum of the two trades' profit across each strike. The function I created in R does basically this; it runs the profit for the long leg, then the short leg, then combines these into a single data frame and sums the two payoffs into a new column. The result of this spread is a bullish trade with a capped upside and reduced downside risk.
 
 ```{r}
 
-lineplot_profit(
+call_spread <- lineplot_profit(
   call_vertical_profit(
     data_pull,
     280,
@@ -479,6 +519,12 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(call_spread),
+  "gamma_gamma_hey_part_two_plot_09.html",
+  selfcontained = TRUE
+)
+
 ```
 
 We can mirror a vertical debit spread for a put by buying a put and selling another further out-of-the-money. This gives us a spread that trades bearish with capped potential profits and reduced entry cost. Again here is a single long put (lets choose slightly out of the money).
@@ -486,13 +532,19 @@ We can mirror a vertical debit spread for a put by buying a put and selling anot
 ```{r}
 
 
-lineplot_profit(
+long_leg <- lineplot_profit(
   long_put_profit(
     data_pull,
     270
   ),
   paste0("Profit, Long QQQ Jan 20th, 2023 $270 Put\nCost Basis: $", as.character(data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_10.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -502,7 +554,7 @@ And if we sold the \$265 (further out-of-the-money) put:
 ```{r}
 
 
-lineplot_profit(
+short_leg <- lineplot_profit(
   short_put_profit(
     data_pull,
     265
@@ -511,13 +563,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_11.html",
+  selfcontained = TRUE
+)
+
 ```
 
 The function to calculate the profits from the put vertical spread is again simply the sum of the long and short payoffs.
 
 ```{r}
 
-lineplot_profit(
+put_spread <- lineplot_profit(
   put_vertical_profit(
     data_pull,
     270,
@@ -527,6 +585,11 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(put_spread),
+  "gamma_gamma_hey_part_two_plot_12.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -536,7 +599,7 @@ Just like we can use a spread trade for a net long position, we can create a net
 
 ```{r}
 
-lineplot_profit(
+short_leg <- lineplot_profit(
   short_call_profit(
     qqq_atm_call_jan_twenty, 
     280
@@ -545,6 +608,11 @@ lineplot_profit(
   data_pull
   )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_13.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -552,7 +620,7 @@ Then we buy a call further from the money (the opposite of a debit spread).
 
 ```{r}
 
-lineplot_profit(
+long_leg <- lineplot_profit(
   long_call_profit(
     data_pull,
     285
@@ -561,13 +629,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_leg),
+  "gamma_gamma_hey_part_two_plot_14.html",
+  selfcontained = TRUE
+)
+
 ```
 
 The result is a spread that allows us to take a short position and define the risk of the trade (otherwise undefined when selling a call). If you look at the code below, you will notice it is identical to the code for the debit spread except with the strikes reversed.
 
 ```{r}
 
-lineplot_profit(
+call_spread <- lineplot_profit(
   call_vertical_profit(
     data_pull,
     285,
@@ -577,13 +651,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(call_spread),
+  "gamma_gamma_hey_part_two_plot_15.html",
+  selfcontained = TRUE
+)
+
 ```
 
 We can also use a short put vertical spread to create a bullish position that receives a credit up front with reduced cost of entry compared to selling the naked put. Here is the same put spread we did before, but with the strikes reversed to make it a net short position.
 
 ```{r}
 
-lineplot_profit(
+put_spread <- lineplot_profit(
   put_vertical_profit(
     data_pull,
     265,
@@ -593,15 +673,21 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(put_spread),
+ "gamma_gamma_hey_part_two_plot_16.html",
+  selfcontained = TRUE
+)
+
 ```
 
 ### Short and Long Iron Condors/Butterflies
 
-Though the name seemss exotic, Iron Condors are simply a put vertical spread combined with a call spread. This sounds counter intuitive, but selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being "right" on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
+Though the name seems exotic, Iron Condors are simply a put vertical spread combined with a call spread. This also sounds counter intuitive, but selling both the call side and the put side allows us to create a delta-neutral position (a position that derives value from volatility and time decay rather than being "right" on direction). Selling both sides allows us push both spreads out and collect the same credit. The logic for modeling this trade is exactly the same as in our vertical spreads where we sum our two data frames to of each leg's profit to get our total profit. The iron condor function simply calls a call vertical function and a put vertical function to each perform the summing of their legs, then again sums the results of both of these "wings" of our condor to arrive at our final result. Let's plot a short Iron Condor that collects \$419.50 of premium up front and risks a max loss of \$580.50.
 
 ```{r}
 
-lineplot_profit(
+short_condor <- lineplot_profit(
   iron_condor_profit(
     option_chain_df = data_pull,
     340,
@@ -616,13 +702,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_condor),
+  "gamma_gamma_hey_part_two_plot_17.html",
+  selfcontained = TRUE
+)
+
 ```
 
 A long condor would be the opposite of the previous trade. This trade would profit given a big move in either direction (or a significant increase in volatility as this position is a net debit).
 
 ```{r}
 
-lineplot_profit(
+long_condor <- lineplot_profit(
   iron_condor_profit(
     option_chain_df = data_pull,
     330,
@@ -636,13 +728,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_condor),
+  "gamma_gamma_hey_part_two_plot_18.html",
+  selfcontained = TRUE
+)
+
 ```
 
 An Iron Butterfly is very similar to an Iron Condor, except that both of the closer to the money contracts share the same strike (usually near-the-money). The short Iron Butterfly illustrated here creates for much higher risk-reward ratio (in this case ~15.5:1), albeit at the cost of a lot of potential risk management and related trade commissions from having to adjust the strikes.
 
 ```{r}
 
-lineplot_profit(
+short_butterfly <- lineplot_profit(
   iron_condor_profit(
     option_chain_df = data_pull,
     290,
@@ -656,13 +754,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_butterfly),
+  "gamma_gamma_hey_part_two_plot_19.html",
+  selfcontained = TRUE
+)
+
 ```
 
 The long Iron Butterfly provides the opposite scenario: a low payout (~6.5%) for a very wide range of strikes with a very extreme downside scenario.
 
 ```{r}
 
-lineplot_profit(
+long_butterfly <- lineplot_profit(
   iron_condor_profit(
     option_chain_df = data_pull,
     280,
@@ -675,6 +779,12 @@ lineplot_profit(
     as.character(((data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 290, "mid"] * 100)) + ((data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 280, "mid"] * 100) - (data_pull[data_pull$contract_type == "P" & data_pull$strike_price == 270, "mid"] * 100)))
     ),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_butterfly),
+  "gamma_gamma_hey_part_two_plot_20.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -724,12 +834,18 @@ Now let's look at the possible profit from holding a 100 shares long of QQQ at a
 
 ```{r}
 
-lineplot_profit(
+long_shares <- lineplot_profit(
   buy_hundred_shares_profit(
     data_pull
     ),
   paste0("Profit, Long 100 shares QQQ\nCost Basis: $", as.character(data_pull$underlying_close[1] * 100)),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_shares),
+  "gamma_gamma_hey_part_two_plot_21.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -762,11 +878,17 @@ sample_sell_call_profit <- data.frame(
     possible_profits = possible_profits
   )
 
-lineplot_profit(
+short_leg <- lineplot_profit(
   sample_sell_call_profit,
   paste0("Profit, Short QQQ Jan 20th, 2023 $355 Call\nInitial premium received: $", as.character(data_pull[data_pull$contract_type == "C" & data_pull$strike_price == 355, "mid"] * 100)),
   data_pull
   )
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_22.html",
+  selfcontained = TRUE
+)
 
 ```
 
@@ -774,7 +896,7 @@ Let's look at what happens when we combine these two trades. Our upside is cappe
 
 ```{r}
 
-lineplot_profit(
+covered_call <- lineplot_profit(
   covered_call_profit(
     data_pull, 
     355
@@ -784,6 +906,12 @@ lineplot_profit(
   as.character((data_pull$underlying_close[1] * 100) - (data_pull[data_pull$strike_price == 355 & data_pull$contract_type == "C", "mid"] * 100))
   ),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(covered_call),
+  "gamma_gamma_hey_part_two_plot_23.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -854,7 +982,7 @@ Let's model the possible profits from selling short 100 shares of QQQ until Jan 
 
 days_till_expiry <- as.numeric(data_pull$expiration_date[1] - data_pull$scrape_date[1])
 
-lineplot_profit(
+short_shares <- lineplot_profit(
   short_hundred_shares_profit(
     data_pull,
     0.0875, 
@@ -868,13 +996,19 @@ lineplot_profit(
 )
 
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_shares),
+  "gamma_gamma_hey_part_two_plot_24.html",
+  selfcontained = TRUE
+)
+
 ```
 
 Now let's look at the potential profits of selling a QQQ Jan 20th, 2023 \$255 Put.
 
 ```{r}
 
-lineplot_profit(
+short_leg <- lineplot_profit(
   short_put_profit(
     data_pull,
     255
@@ -886,13 +1020,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_leg),
+  "gamma_gamma_hey_part_two_plot_25.html",
+  selfcontained = TRUE
+)
+
 ```
 
 The covered put profits are the sum of the profits from the short shares position and the profits from selling the put. To reduce our entry cost basis we sacrifice limiting our profits to ~\$2800 (though short share positions are inherently profit capped at \$0 per share).
 
 ```{r}
 
-lineplot_profit(
+covered_put <- lineplot_profit(
   covered_put_profit(
     data_pull, 
     255,
@@ -905,6 +1045,12 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(covered_put),
+  "gamma_gamma_hey_part_two_plot_26.html",
+  selfcontained = TRUE
+)
+
 ```
 
 ### Reducing the volatility of equity positions
@@ -913,7 +1059,7 @@ Instead of using the premium received from selling a call against a long equity 
 
 ```{r}
 
-lineplot_profit(
+long_collar <- lineplot_profit(
   long_collar_profit(
     data_pull, 
     305, 
@@ -926,13 +1072,19 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_collar),
+  "gamma_gamma_hey_part_two_plot_27.html",
+  selfcontained = TRUE
+)
+
 ```
 
 We can also add a collar to a short position by selling a put and buying a call to reduce the volatility of returns. We can cap our possible losses in the QQQ short position to \$3,636.04 by selling the Jan 20th, 2023 \$260 put against our position and buy the \$305 call with the premium (plus a \$43 dollar credit we get to pocket) and limiting our maximum possible profit to \$863.96.
 
 ```{r}
 
-lineplot_profit(
+short_collar <- lineplot_profit(
   short_collar_profit(
     data_pull, 
     260, 
@@ -944,6 +1096,12 @@ lineplot_profit(
   as.character(round((data_pull[data_pull$strike_price == 260 & data_pull$contract_type == "P", "mid"] * 100) - (data_pull[data_pull$strike_price == 305 & data_pull$contract_type == "C", "mid"] * 100)),2)
   ),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_collar),
+  "gamma_gamma_hey_part_two_plot_28.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -969,7 +1127,7 @@ Simply put, this means being long the call and short the put is the same as bein
 
 ```{r}
 
-lineplot_profit(
+long_forward <- lineplot_profit(
   long_synthetic_forward(
     data_pull, 
     280
@@ -979,6 +1137,12 @@ lineplot_profit(
   as.character(round((data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "C", "mid"] * 100) - (data_pull[data_pull$strike_price == 280 & data_pull$contract_type == "P", "mid"] * 100)),2)
   ),
   data_pull
+)
+
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(long_forward),
+  "gamma_gamma_hey_part_two_plot_29.html",
+  selfcontained = TRUE
 )
 
 ```
@@ -995,7 +1159,7 @@ To put this into an actionable trade, being short the call and long the put is e
 
 ```{r}
 
-lineplot_profit(
+short_forward <- lineplot_profit(
   short_synthetic_forward(
     data_pull, 
     280
@@ -1007,8 +1171,16 @@ lineplot_profit(
   data_pull
 )
 
+htmlwidgets::saveWidget(
+  widgetframe::frameableWidget(short_forward),
+  "gamma_gamma_hey_part_two_plot_30.html",
+  selfcontained = TRUE
+)
+
 ```
 
 
 
 An array of different profit structures can be created by going long and short calls and puts at different strikes. However, all of the strategies we have examined so far have contracts containing the same expiration and have only been valued at expiration. In order to look at values before expiration or strategies spread across different expirations we will need to get the Greeks involved. In the next post, we will examine the Black-Scholes-Merton model and look at how it's variables can help us solve this problem.  
+
+###### (Obviously, nothing in this article constitutes anything in the way of trading advice, financial advice, life advice, or fashion advice. If you take any position even slightly resembling these trades you will likely lose money, and when you go out in public groups of children will gather to point at you and laugh and call you a "stupid head".) 

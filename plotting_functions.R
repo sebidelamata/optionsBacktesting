@@ -1,12 +1,14 @@
 # plotting our payoff functions (plotly)
 # takes a profit df (2 columns profits and strikes)
 # and a Title for the plot
-lineplot_profit <- function(profit_df, title, option_chain_df){
+lineplot_profit <- function(profit_df, title, option_chain_df, filename){
   
   library(ggplot2)
   library(plotly)
   library(scales)
   library(wesanderson)
+  library(htmlwidgets)
+  library(widgetframe)
   
   profit_lineplot <- ggplot(
     data = profit_df,
@@ -61,9 +63,5 @@ lineplot_profit <- function(profit_df, title, option_chain_df){
     scale_color_manual(values = c(wesanderson::wes_palette("Royal1")[3]))
   
   profit_lineplot <- plotly::ggplotly(profit_lineplot, tooltip = c("text"))
-  
-
-  
-  return(profit_lineplot)
   
 }
