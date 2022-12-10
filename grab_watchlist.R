@@ -32,7 +32,9 @@ grab_watchlist <- function(){
     "BITO",
     "_SPX",
     "_RUT",
-    "_NDX"
+    "_NDX",
+    "USO",
+    "UNG"
   )
   
   # create an empty dataframe 
