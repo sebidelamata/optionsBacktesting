@@ -34,7 +34,8 @@ grab_watchlist <- function(){
     "_RUT",
     "_NDX",
     "USO",
-    "UNG"
+    "UNG",
+    "XOP"
   )
   
   # create an empty dataframe 
